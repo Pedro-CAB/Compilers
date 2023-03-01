@@ -6,11 +6,13 @@ grammar Javamm;
 
 INTEGER : [0-9]+ ;
 ID : [a-zA-Z_][a-zA-Z_0-9]* ;
+COMMENTINLINE: '//' ~( '\r' | '\n')* -> skip;
+COMMENTMULTILINE:'/*' .* '*/' -> skip ;
 
 WS : [ \t\n\r\f]+ -> skip ;
 
 program
-    : statement+ EOF
+    : (statement)+ EOF
     ;
 
 statement
