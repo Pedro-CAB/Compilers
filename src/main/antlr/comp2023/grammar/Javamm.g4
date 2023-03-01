@@ -21,7 +21,8 @@ statement
     ;
 
 expression
-    : expression op=('*' | '/') expression #BinaryOp
+    : op='!' expression #UnaryOp
+    | expression op=('*' | '/') expression #BinaryOp
     | expression op=('+' | '-') expression #BinaryOp
     | value=INTEGER #Integer
     | value=ID #Identifier
