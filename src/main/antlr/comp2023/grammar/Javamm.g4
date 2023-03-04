@@ -6,13 +6,34 @@ grammar Javamm;
 
 INTEGER : [0-9]+ ;
 ID : [a-zA-Z_][a-zA-Z_0-9]* ;
-COMMENTINLINE: '//' ~( '\r' | '\n')* -> skip;
-COMMENTMULTILINE:'/*' .* '*/' -> skip ;
-
+COMMENTINLINE : '//' ~( '\r' | '\n')* -> skip;
+COMMENTMULTILINE:'/*' (.)*? '*/' -> skip ;
 WS : [ \t\n\r\f]+ -> skip ;
+PACKAGENAME : [a-zA-Z_]+;
+CLASSNAME : [A-Z][a-zA-Z_0-9]* ;
 
 program
-    : (statement)+ EOF
+    : header fullClass
+    ;
+
+header
+    : classImport*
+    ;
+
+fullClass
+    : classDeclaration '{' code '}'
+    ;
+
+classImport
+    : 'import ' PACKAGENAME ';' #ImportPackage
+    ;
+
+code
+    : (statement)+
+    ;
+
+classDeclaration
+    : ('public'|'private')? 'class' CLASSNAME ('extends' CLASSNAME)? ('implements' CLASSNAME)? #DeclaredClass
     ;
 
 statement

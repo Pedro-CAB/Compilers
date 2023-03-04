@@ -1,3 +1,4 @@
-1 * 2;
-// 123 asfjgnesf
-3 + 5;
+import JavaRandomPackage ;
+class RandomClass {
+    a = 1;
+}
