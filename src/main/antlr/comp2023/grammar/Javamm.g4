@@ -16,11 +16,11 @@ program
     ;
 
 statement
-    : 'if' '(' expression ')' statement 'else' statement #IfElse
+    : 'if' '(' expression ')' statement ('else' 'if' '(' expression ')' statement)* ('else' statement)? #IfElse
     | 'do' statement 'while' '(' expression ')' ';' #DoWhile
     | 'while' '(' expression ')' statement #While
     | '{' statement* '}' #NestedStatements
-    | var=ID op=('=' | '+=' | '-=' | '*=' | '/=' | '%=' ) expression ';' #Assignment
+    | var=ID '=' expression ';' #Assignment
     | expression ';' #ExprStmt
     ;
 
@@ -39,6 +39,7 @@ expression
     | expression op='&&' expression #BinaryOp
     | expression op='||' expression #BinaryOp
     | expression op='?:' expression #BinaryOp
+    | expression op=('+=' | '-=' | '*=' | '/=' | '%=') expression #BinaryOp
     | value=INT #Integer
     | value=ID #Identifier
     | value=('true' | 'false') #Boolean
