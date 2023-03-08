@@ -19,6 +19,7 @@ statement
     : 'if' '(' expression ')' statement ('else' 'if' '(' expression ')' statement)* ('else' statement)? #IfElse
     | 'do' statement 'while' '(' expression ')' ';' #DoWhile
     | 'while' '(' expression ')' statement #While
+    | 'switch' '(' expression ')' '{' ('case' expression ':' statement* ('break' ';')?)* 'default' ':' statement* ('break' ';')? '}' #Switch
     | '{' statement* '}' #NestedStatements
     | var=ID '=' expression ';' #Assignment
     | expression ';' #ExprStmt
