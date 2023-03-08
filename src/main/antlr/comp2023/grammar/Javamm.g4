@@ -16,16 +16,28 @@ program
     ;
 
 statement
-    : expression ';' #ExprStmt
-    | var=ID '=' expression ';' #Assignment
+    : 'if' '(' expression ')' statement 'else' statement #IfElse
+    | 'while' '(' expression ')' statement #While
+    | '{' statement* '}' #NestedStatements
+    | var=ID op=('=' | '+=' | '-=' | '*=' | '/=' | '%=' ) expression ';' #Assignment
+    | expression ';' #ExprStmt
     ;
 
 expression
     : '(' expression ')' #Parentheses
-    | expression op=('*' | '/') expression #BinaryOp
+    | expression op=('++' | '--') #UnaryPostOp
+    | op=('++' | '--' | '+' | '-' | '!' | '~') expression #UnaryPreOp
+    | expression op=('*' | '/' | '%') expression #BinaryOp
     | expression op=('+' | '-') expression #BinaryOp
-    | expression op='<' expression #BinaryOp
+    | expression op=('<<' | '>>' | '>>>') expression #BinaryOp
+    | expression op=('<' | '<=' | '>' | '>=' | 'instanceof') expression #BinaryOp
+    | expression op=('==' | '!=' ) expression #BinaryOp
+    | expression op='&' expression #BinaryOp
+    | expression op='^' expression #BinaryOp
+    | expression op='|' expression #BinaryOp
     | expression op='&&' expression #BinaryOp
+    | expression op='||' expression #BinaryOp
+    | expression op='?:' expression #BinaryOp
     | value=INTEGER #Integer
     | value=ID #Identifier
     ;
