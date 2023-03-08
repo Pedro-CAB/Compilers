@@ -44,24 +44,11 @@ classImplements //Classes Implementadas pela Classe Criada (podem ser várias ou
     ;
 
 classCode //Conteúdo da Classe
-    : (classField | classMethod)+
-    ;
-
-classField //Exemplo: 'int i;' ou 'int i = 1;'
-    : value=ID (varAssignement|varDeclaration) ';' #FieldType
-    ;
-
-varAssignement //Associar um valor a uma variável
-    : varDeclaration '=' expression
-    | value=ID '=' expression
-    ;
-
-varDeclaration //Declarar uma variável
-    : value=ID #VarName
+    : (statement | classMethod)+
     ;
 
 classMethod //Exemplo: 'public int sum(int x, int y)'
-    : ('public' | 'private') value=ID methodDefinition '{' methodCode* '}' #MethodReturnType
+    : ('public' | 'private') value=ID methodDefinition '{' statement* '}' #MethodReturnType
     ;
 
 methodDefinition
@@ -69,7 +56,7 @@ methodDefinition
     ;
 
 methodArgument
-    :value=ID varDeclaration #ArgumentType
+    :type=ID var=ID #ArgumentType
     |methodArgument ',' methodArgument #Arguments
     ;
 
@@ -79,13 +66,9 @@ statement
     | 'while' '(' expression ')' statement #While
     | 'switch' '(' expression ')' '{' ('case' expression ':' statement* ('break' ';')?)* 'default' ':' statement* ('break' ';')? '}' #Switch
     | '{' statement* '}' #NestedStatements
+    | type=ID var=ID ('=' expression)? ';' #Declaration
     | var=ID '=' expression ';' #Assignment
     | expression ';' #ExprStmt
-    ;
-
-methodCode
-    : value=ID (varAssignement|varDeclaration) ';' #VarType
-    | varAssignement ';' #Assignement
     ;
 
 expression
