@@ -4,7 +4,7 @@ grammar Javamm;
     package pt.up.fe.comp2023;
 }
 
-INTEGER : [0-9]+ ;
+INT : [0-9]+ ;
 ID : [a-zA-Z_$][a-zA-Z_$0-9]* ;
 COMMENTINLINE : '//' ~[\r\n]* -> skip ;
 COMMENTMULTILINE : '/*' .*? '*/' -> skip ;
@@ -17,6 +17,7 @@ program
 
 statement
     : 'if' '(' expression ')' statement 'else' statement #IfElse
+    | 'do' statement 'while' '(' expression ')' ';' #DoWhile
     | 'while' '(' expression ')' statement #While
     | '{' statement* '}' #NestedStatements
     | var=ID op=('=' | '+=' | '-=' | '*=' | '/=' | '%=' ) expression ';' #Assignment
@@ -38,6 +39,8 @@ expression
     | expression op='&&' expression #BinaryOp
     | expression op='||' expression #BinaryOp
     | expression op='?:' expression #BinaryOp
-    | value=INTEGER #Integer
+    | value=INT #Integer
     | value=ID #Identifier
+    | value=('true' | 'false') #Boolean
+    | value='this' #Self
     ;
