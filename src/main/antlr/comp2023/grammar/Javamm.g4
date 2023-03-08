@@ -14,40 +14,68 @@ program
     : header fullClass
     ;
 
-header
-    : classImport*
+header //Header é um conjunto de Imports de Packages
+    : packageImport*
     ;
 
-fullClass
-    : classDeclaration '{' code '}'
-    ;
-
-classImport
+packageImport //Exemplo: 'import JavaRandomPackage' (falta implementar '.')
     : 'import ' value=ID ';' #ImportPackage
     ;
 
-code
-    : (statement)+
+fullClass //Uma Classe tem a estrutura declaração{código}
+    : classDeclaration '{' classCode '}'
     ;
 
-classDeclaration
+classDeclaration //Declaração da Classe Dividida em Etapas
     : classIdentification (classExtends)? (classImplements)?
     ;
 
-classIdentification
+classIdentification //Definição de Acessos e nome da classe
     : ('public'|'private')? 'class' value=ID #CreatedClass
     ;
 
-classExtends
+classExtends //Classe Extendida pela Classe Criada (só pode extender no máximo uma)
     :'extends' value=ID #ExtendedClass
     ;
 
-classImplements
+classImplements //Classes Implementadas pela Classe Criada (podem ser várias ou nenhuma)
     :'implements' value=ID #ImplementedClass
+    | classImplements classImplements #ImplementedClasses
     ;
 
-statement
-    : value=ID '=' expression ';'   #Assignement
+classCode //Conteúdo da Classe
+    : (classField | classMethod)+
+    ;
+
+classField //Exemplo: 'int i;' ou 'int i = 1;'
+    : value=ID (varAssignement|varDeclaration) ';' #FieldType
+    ;
+
+varAssignement //Associar um valor a uma variável
+    : varDeclaration '=' expression
+    | value=ID '=' expression
+    ;
+
+varDeclaration //Declarar uma variável
+    : value=ID #VarName
+    ;
+
+classMethod //Exemplo: 'public int sum(int x, int y)'
+    : ('public' | 'private') value=ID methodDefinition '{' methodCode '}' #MethodReturnType
+    ;
+
+methodDefinition
+    : value=ID '(' (methodArgument)? ')' #MethodName
+    ;
+
+methodArgument
+    :value=ID varDeclaration #ArgumentType
+    |methodArgument ',' methodArgument #Arguments
+    ;
+
+methodCode
+    : value=ID (varAssignement|varDeclaration) ';' #VarType
+    | varAssignement ';' #Assignement
     ;
 
 expression

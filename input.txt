@@ -1,6 +1,8 @@
 import JavaRandomPackage;
 class RandomClass extends Something implements Something {
-    a = 1;
-    b = a + 3;
-    c = a * b + 5;
+    int a = 1;
+    int b;
+    public int sum(int x, int y){
+        int b = x + y + a;
+    }
 }
