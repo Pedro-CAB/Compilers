@@ -4,13 +4,11 @@ grammar Javamm;
     package pt.up.fe.comp2023;
 }
 
-INTEGER : [0-9]+ ;
+INTEGER : [1-9][0-9]* ;
 ID : [a-zA-Z_][a-zA-Z_0-9]* ;
 COMMENTINLINE : '//' ~( '\r' | '\n')* -> skip;
 COMMENTMULTILINE:'/*' (.)*? '*/' -> skip ;
 WS : [ \t\n\r\f]+ -> skip ;
-PACKAGENAME : [a-zA-Z_]+;
-CLASSNAME : [A-Z][a-zA-Z_0-9]* ;
 
 program
     : header fullClass
@@ -25,7 +23,7 @@ fullClass
     ;
 
 classImport
-    : 'import ' PACKAGENAME ';' #ImportPackage
+    : 'import ' value=ID ';' #ImportPackage
     ;
 
 code
@@ -33,12 +31,23 @@ code
     ;
 
 classDeclaration
-    : ('public'|'private')? 'class' CLASSNAME ('extends' CLASSNAME)? ('implements' CLASSNAME)? #DeclaredClass
+    : classIdentification (classExtends)? (classImplements)?
+    ;
+
+classIdentification
+    : ('public'|'private')? 'class' value=ID #CreatedClass
+    ;
+
+classExtends
+    :'extends' value=ID #ExtendedClass
+    ;
+
+classImplements
+    :'implements' value=ID #ImplementedClass
     ;
 
 statement
-    : expression ';'
-    | ID '=' INTEGER ';'
+    : value=ID '=' expression ';'   #Assignement
     ;
 
 expression

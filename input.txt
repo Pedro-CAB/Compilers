@@ -1,4 +1,6 @@
-import JavaRandomPackage ;
-class RandomClass {
+import JavaRandomPackage;
+class RandomClass extends Something implements Something {
     a = 1;
+    b = a + 3;
+    c = a * b + 5;
 }
