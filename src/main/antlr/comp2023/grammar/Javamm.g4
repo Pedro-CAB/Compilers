@@ -4,10 +4,10 @@ grammar Javamm;
     package pt.up.fe.comp2023;
 }
 
-INTEGER : [1-9][0-9]* ;
-ID : [a-zA-Z_][a-zA-Z_0-9]* ;
-COMMENTINLINE : '//' ~( '\r' | '\n')* -> skip;
-COMMENTMULTILINE:'/*' (.)*? '*/' -> skip ;
+INT : [1-9][0-9]* ;
+ID : [a-zA-Z_$][a-zA-Z_$0-9]* ;
+COMMENTINLINE : '//' ~[\r\n]* -> skip ;
+COMMENTMULTILINE : '/*' .*? '*/' -> skip ;
 WS : [ \t\n\r\f]+ -> skip ;
 
 program
@@ -47,13 +47,33 @@ classImplements
     ;
 
 statement
-    : value=ID '=' expression ';'   #Assignement
+    : 'if' '(' expression ')' statement ('else' 'if' '(' expression ')' statement)* ('else' statement)? #IfElse
+    | 'do' statement 'while' '(' expression ')' ';' #DoWhile
+    | 'while' '(' expression ')' statement #While
+    | 'switch' '(' expression ')' '{' ('case' expression ':' statement* ('break' ';')?)* 'default' ':' statement* ('break' ';')? '}' #Switch
+    | '{' statement* '}' #NestedStatements
+    | var=ID '=' expression ';' #Assignment
+    | expression ';' #ExprStmt
     ;
 
 expression
-    : op='!' expression #UnaryOp
-    | expression op=('*' | '/') expression #BinaryOp
+    : '(' expression ')' #Parentheses
+    | expression op=('++' | '--') #UnaryPostOp
+    | op=('++' | '--' | '+' | '-' | '!' | '~') expression #UnaryPreOp
+    | expression op=('*' | '/' | '%') expression #BinaryOp
     | expression op=('+' | '-') expression #BinaryOp
-    | value=INTEGER #Integer
+    | expression op=('<<' | '>>' | '>>>') expression #BinaryOp
+    | expression op=('<' | '<=' | '>' | '>=' | 'instanceof') expression #BinaryOp
+    | expression op=('==' | '!=' ) expression #BinaryOp
+    | expression op='&' expression #BinaryOp
+    | expression op='^' expression #BinaryOp
+    | expression op='|' expression #BinaryOp
+    | expression op='&&' expression #BinaryOp
+    | expression op='||' expression #BinaryOp
+    | expression op='?:' expression #BinaryOp
+    | expression op=('+=' | '-=' | '*=' | '/=' | '%=') expression #BinaryOp
+    | value=INT #Integer
     | value=ID #Identifier
+    | value=('true' | 'false') #Boolean
+    | value='this' #Self
     ;

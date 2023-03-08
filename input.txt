@@ -4,3 +4,18 @@ class RandomClass extends Something implements Something {
     b = a + 3;
     c = a * b + 5;
 }
+
+switch(a){
+    case 1:
+        a < 3;
+    case 2:
+        a < 3;
+        break;
+    case 3:
+        a < 4;
+        break;
+    default:
+        a >= 4;
+        break;
+}
+
