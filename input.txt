@@ -1,3 +1,6 @@
-1 * 2;
-// 123 asfjgnesf
-3 + 5;
+import JavaRandomPackage;
+class RandomClass extends Something implements Something {
+    a = 1;
+    b = a + 3;
+    c = a * b + 5;
+}
