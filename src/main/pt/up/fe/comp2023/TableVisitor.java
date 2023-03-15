@@ -7,13 +7,14 @@ import pt.up.fe.comp.jmm.ast.JmmNode;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class TableVisitor extends AJmmVisitor<String, String> {
 
     Table table = new Table();
     @Override
     protected void buildVisitor() {
-        addVisit("Imports", this::dealWithImports);
+        addVisit("packageImport", this::dealWithImports);
         addVisit("Class Name", this::dealWithClassName);
         addVisit("Super", this::dealWithSuper);
         addVisit("Fields", this::dealWithFields);
@@ -28,14 +29,19 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
         //TODO
         List<String> imports = new ArrayList<>();
-        table.setImports(imports);
+
+        if (Objects.equals(jmmNode.getKind(), "packageImport")){
+
+            imports.add(jmmNode.getKind());
+            table.setImports(imports);
+
+        }
         return "";
     }
 
     private String dealWithClassName(JmmNode jmmNode, String s){
 
         //TODO
-
         String class_name = "";
 
         table.setClassName(class_name);
