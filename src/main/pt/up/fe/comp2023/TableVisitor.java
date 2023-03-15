@@ -27,19 +27,25 @@ public class TableVisitor extends AJmmVisitor<String, String> {
     }
 
     private String dealWithImports(JmmNode jmmNode, String s){
-
-        //TODO
+        s = s != null?s:"";
         List<String> imports = new ArrayList<>();
-
-        String path = "import " + jmmNode.get("path");
-        String value = "";
+        String ret = s+"import " + jmmNode.get("path");
+        String s1 = "";
         for (JmmNode child :jmmNode.getChildren()){
-            path += visit(child, value);
+
+            ret += visit(child, s1);
+
         }
 
-        path += ";";
+        ret += ".";
 
-        imports.add(path);
+        ret += jmmNode.get("value");
+
+        ret += ";";
+
+        imports.add(ret);
+
+        table.setImports(imports);
 
         return "";
     }

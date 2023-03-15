@@ -1,1 +1,7 @@
-import JavaRandomPackage;
+import RandomPackage.a;
+
+public class MainAnalysis implements JmmAnalysis {
+    public void main(String[] args) {
+        int a = 3;
+    }
+}

@@ -22,11 +22,11 @@ public class Launcher {
 
         // Get input file
         File inputFile = new File(config.get("inputFile"));
-
         // Check if file exists
         if (!inputFile.isFile()) {
             throw new RuntimeException("Expected a path to an existing input file, got '" + inputFile + "'.");
         }
+
 
         // Read contents of input file
         String code = SpecsIo.read(inputFile);
