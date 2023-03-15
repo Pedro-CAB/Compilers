@@ -11,15 +11,11 @@ COMMENTMULTILINE : '/*' .*? '*/' -> skip ;
 WS : [ \t\n\r\f]+ -> skip ;
 
 program
-    : packageImport* fullClass? statement*
+    : packageImport* classDeclaration '{' classCode '}' statement*
     ;
 
 packageImport //Exemplo: 'import JavaRandomPackage' (falta implementar '.')
-    : 'import ' value=ID ';' #ImportPackage
-    ;
-
-fullClass //Uma Classe tem a estrutura declaração{código}
-    : classDeclaration '{' classCode '}'
+    : 'import ' (path=ID '.')* value=ID ';' #ImportPackage
     ;
 
 classDeclaration //Declaração da Classe Dividida em Etapas
@@ -27,11 +23,11 @@ classDeclaration //Declaração da Classe Dividida em Etapas
     ;
 
 classIdentification //Definição de Acessos e nome da classe
-    : ('public'|'private')? 'class' value=ID #CreatedClass
+    : ('public'|'private')? 'class' value=ID #ClassName
     ;
 
 classExtends //Classe Extendida pela Classe Criada (só pode extender no máximo uma)
-    :'extends' value=ID #ExtendedClass
+    :'extends' value=ID #SuperclassName
     ;
 
 classImplements //Classes Implementadas pela Classe Criada (podem ser várias ou nenhuma)
@@ -40,20 +36,15 @@ classImplements //Classes Implementadas pela Classe Criada (podem ser várias ou
     ;
 
 classCode //Conteúdo da Classe
-    : (statement | classMethod)+
+    : (statement | classMethod)*
     ;
 
 classMethod //Exemplo: 'public int sum(int x, int y)'
-    : ('public' | 'private') value=ID methodDefinition '{' statement* '}' #MethodReturnType
-    ;
-
-methodDefinition
-    : value=ID '(' (methodArgument)? ')' #MethodName
+    : ('public' | 'private' | 'static' )? type=ID name=ID '(' (methodArgument ','?)* ')' '{' statement* '}' #MethodDeclaration
     ;
 
 methodArgument
-    :type=ID var=ID #ArgumentType
-    |methodArgument ',' methodArgument #Arguments
+    : type=ID '[]'? var=ID #Argument
     ;
 
 statement
@@ -62,14 +53,17 @@ statement
     | 'while' '(' expression ')' statement #While
     | 'switch' '(' expression ')' '{' ('case' expression ':' statement* ('break' ';')?)* 'default' ':' statement* ('break' ';')? '}' #Switch
     | '{' statement* '}' #NestedStatements
+    | type=ID '[]' var=ID ('=' expression)? ';' #ArrayDeclaration
     | type=ID var=ID ('=' expression)? ';' #Declaration
     | var=ID '=' expression ';' #Assignment
+    | var=ID '[' expression ']' '=' expression ';' #ArrayAssignment
+    | 'return' expression ';' #Return
     | expression ';' #ExprStmt
     ;
 
 expression
-    : '(' expression ')' #Parentheses
-    | ('[' value=INT ']')+ # Array
+    : '(' expression ')' #Scope
+    | expression '.length'+ #Length
     | expression op=('++' | '--') #UnaryPostOp
     | op=('++' | '--' | '+' | '-' | '!' | '~') expression #UnaryPreOp
     | expression op=('*' | '/' | '%') expression #BinaryOp
@@ -84,8 +78,15 @@ expression
     | expression op='||' expression #BinaryOp
     | expression op='?:' expression #BinaryOp
     | expression op=('+=' | '-=' | '*=' | '/=' | '%=') expression #BinaryOp
+    | 'new' type=ID '()'? ('[' expression? ']')* #NewObject
+    | className=ID methodCall*  #MethodCalls
     | value=INT #Integer
     | value=ID #Identifier
     | value=('true' | 'false') #Boolean
+    | expression ('[' expression ']')+ #ArrayAcess
     | value='this' #Self
+    ;
+
+methodCall
+    : '.' methodName=ID ('()' | '(' (expression ','?)* ')' )
     ;

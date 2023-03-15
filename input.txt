@@ -1,1 +1,1 @@
-{a; b; c;}
+callee.level1(true).level2();
