@@ -1,1 +1,1 @@
-callee.level1(true).level2();
+import JavaRandomPackage;

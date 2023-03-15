@@ -1,5 +1,6 @@
 package pt.up.fe.comp2023;
 
+import pt.up.fe.comp.jmm.analysis.JmmAnalysis;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
@@ -30,12 +31,16 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         //TODO
         List<String> imports = new ArrayList<>();
 
-        if (Objects.equals(jmmNode.getKind(), "packageImport")){
-
-            imports.add(jmmNode.getKind());
-            table.setImports(imports);
-
+        String path = "import " + jmmNode.get("path");
+        String value = "";
+        for (JmmNode child :jmmNode.getChildren()){
+            path += visit(child, value);
         }
+
+        path += ";";
+
+        imports.add(path);
+
         return "";
     }
 

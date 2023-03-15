@@ -13,8 +13,6 @@ public class Analysis implements JmmAnalysis {
 
         Table table = visitor.table;
 
-        parserResult.getReports();
-
         JmmSemanticsResult result = new JmmSemanticsResult(parserResult, table, parserResult.getReports());
 
         return result;
