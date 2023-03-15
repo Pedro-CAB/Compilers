@@ -41,28 +41,28 @@ classImplements //Classes Implementadas pela Classe Criada (podem ser várias ou
     ;
 
 classCode //Conteúdo da Classe
-    : (statement | classMethod)+
+    : statement*
     ;
 
-classMethod //Exemplo: 'public int sum(int x, int y)'
-    : ('public' | 'private') value=ID methodDefinition '{' statement* '}' #MethodReturnType
+methodDeclaration //Exemplo: 'public int sum(int x, int y)'
+    : ('public' | 'private')? value=ID methodHeader '{' statement* '}' #MethodReturnType
     ;
 
-methodDefinition
-    : value=ID '(' (methodDefinitionArgument)? ')' #MethodName
+methodHeader
+    : value=ID '(' (methodHeaderArgument)? ')' #MethodDeclarationName
     ;
 
-methodDefinitionArgument
+methodHeaderArgument
     :type=ID var=ID #ArgumentType
-    |methodDefinitionArgument ',' methodDefinitionArgument #Arguments
+    |methodHeaderArgument ',' methodHeaderArgument #Arguments
     ;
 
 methodOverVar
-    : value=ID '.' methodCall
+    : value=ID '.' methodCall #MethodCalledOver
     ;
 
 methodCall
-    : value=ID '(' args ')'
+    : value=ID '(' args ')' #MethodCallName
     ;
 
 args
@@ -76,9 +76,11 @@ statement
     | 'while' '(' expression ')' statement #While
     | 'switch' '(' expression ')' '{' ('case' expression ':' statement* ('break' ';')?)* 'default' ':' statement* ('break' ';')? '}' #Switch
     | '{' statement* '}' #NestedStatements
+    | 'return' expression ';' #ReturnStatement
     | type=ID var=ID ('=' expression)? ';' #Declaration
     | var=ID '=' expression ';' #Assignment
     | expression ';' #ExprStmt
+    | methodDeclaration #MethodDeclared
     ;
 
 expression
