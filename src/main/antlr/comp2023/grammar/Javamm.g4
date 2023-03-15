@@ -4,6 +4,7 @@ grammar Javamm;
     package pt.up.fe.comp2023;
 }
 
+BOOLEAN : ('true'|'false') ;
 INT : ([0] | [1-9][0-9]*) ;
 ID : [a-zA-Z_$][a-zA-Z_$0-9]* ;
 COMMENTINLINE : '//' ~[\r\n]* -> skip ;
@@ -11,7 +12,7 @@ COMMENTMULTILINE : '/*' .*? '*/' -> skip ;
 WS : [ \t\n\r\f]+ -> skip ;
 
 program
-    : packageImport* fullClass? statement*
+    : packageImport* fullClass* statement*
     ;
 
 packageImport //Exemplo: 'import JavaRandomPackage' (falta implementar '.')
@@ -48,12 +49,25 @@ classMethod //Exemplo: 'public int sum(int x, int y)'
     ;
 
 methodDefinition
-    : value=ID '(' (methodArgument)? ')' #MethodName
+    : value=ID '(' (methodDefinitionArgument)? ')' #MethodName
     ;
 
-methodArgument
+methodDefinitionArgument
     :type=ID var=ID #ArgumentType
-    |methodArgument ',' methodArgument #Arguments
+    |methodDefinitionArgument ',' methodDefinitionArgument #Arguments
+    ;
+
+methodOverVar
+    : value=ID '.' methodCall
+    ;
+
+methodCall
+    : value=ID '(' args ')'
+    ;
+
+args
+    : (value=ID | value=INT | value=BOOLEAN) ',' args
+    | (value=ID | value=INT | value=BOOLEAN)
     ;
 
 statement
@@ -86,6 +100,9 @@ expression
     | expression op=('+=' | '-=' | '*=' | '/=' | '%=') expression #BinaryOp
     | value=INT #Integer
     | value=ID #Identifier
-    | value=('true' | 'false') #Boolean
+    | value=BOOLEAN #Boolean
     | value='this' #Self
+    | methodOverVar #CallMethodOverVar
+    | methodCall #CallMethod
     ;
+

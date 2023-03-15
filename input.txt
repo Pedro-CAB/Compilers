@@ -1,1 +1,1 @@
-{a; b; c;}
+foo.bar(10, a, true);
