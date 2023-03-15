@@ -4,7 +4,6 @@ grammar Javamm;
     package pt.up.fe.comp2023;
 }
 
-BOOLEAN : ('true'|'false') ;
 INT : ([0] | [1-9][0-9]*) ;
 ID : [a-zA-Z_$][a-zA-Z_$0-9]* ;
 COMMENTINLINE : '//' ~[\r\n]* -> skip ;
@@ -12,15 +11,11 @@ COMMENTMULTILINE : '/*' .*? '*/' -> skip ;
 WS : [ \t\n\r\f]+ -> skip ;
 
 program
-    : packageImport* fullClass* statement*
+    : packageImport* classDeclaration '{' classCode '}' statement*
     ;
 
 packageImport //Exemplo: 'import JavaRandomPackage' (falta implementar '.')
-    : 'import ' value=ID ';' #ImportPackage
-    ;
-
-fullClass //Uma Classe tem a estrutura declaração{código}
-    : classDeclaration '{' classCode '}'
+    : 'import ' (path=ID '.')* value=ID ';' #ImportPackage
     ;
 
 classDeclaration //Declaração da Classe Dividida em Etapas
@@ -28,11 +23,11 @@ classDeclaration //Declaração da Classe Dividida em Etapas
     ;
 
 classIdentification //Definição de Acessos e nome da classe
-    : ('public'|'private')? 'class' value=ID #CreatedClass
+    : ('public'|'private')? 'class' value=ID #ClassName
     ;
 
 classExtends //Classe Extendida pela Classe Criada (só pode extender no máximo uma)
-    :'extends' value=ID #ExtendedClass
+    :'extends' value=ID #SuperclassName
     ;
 
 classImplements //Classes Implementadas pela Classe Criada (podem ser várias ou nenhuma)
@@ -41,38 +36,15 @@ classImplements //Classes Implementadas pela Classe Criada (podem ser várias ou
     ;
 
 classCode //Conteúdo da Classe
-    : statement*
+    : (statement | classMethod)*
     ;
 
-methodDeclaration //Exemplo: 'public int sum(int x, int y)'
-    : ('public' | 'private')? ('static')? value=ID methodHeader '{' statement* '}' #MethodReturnType
+classMethod //Exemplo: 'public int sum(int x, int y)'
+    : ('public' | 'private' | 'static' )? type=ID name=ID '(' (methodArgument ','?)* ')' '{' statement* '}' #MethodDeclaration
     ;
 
-methodHeader
-    : value=ID '(' (methodHeaderArgument)? ')' #MethodDeclarationName
-    ;
-
-methodHeaderArgument
-    :type=ID var=ID #ArgumentType
-    |methodHeaderArgument ',' methodHeaderArgument #Arguments
-    ;
-
-methodOverVar
-    : value=ID '.' methodCall #MethodCalledOver
-    ;
-
-methodCall
-    : value=ID '(' args ')' #MethodCallName
-    ;
-
-args
-    : (value=ID | value=INT | value=BOOLEAN) ',' args
-    | (value=ID | value=INT | value=BOOLEAN)
-    ;
-
-attribute
-    : '.' value=ID
-    | '.' value=ID '.' attribute
+methodArgument
+    : type=ID '[]'? var=ID #Argument
     ;
 
 statement
@@ -81,16 +53,17 @@ statement
     | 'while' '(' expression ')' statement #While
     | 'switch' '(' expression ')' '{' ('case' expression ':' statement* ('break' ';')?)* 'default' ':' statement* ('break' ';')? '}' #Switch
     | '{' statement* '}' #NestedStatements
-    | 'return' expression ';' #ReturnStatement
+    | type=ID '[]' var=ID ('=' expression)? ';' #ArrayDeclaration
     | type=ID var=ID ('=' expression)? ';' #Declaration
     | var=ID '=' expression ';' #Assignment
+    | var=ID '[' expression ']' '=' expression ';' #ArrayAssignment
+    | 'return' expression ';' #Return
     | expression ';' #ExprStmt
-    | methodDeclaration #MethodDeclared
     ;
 
 expression
-    : '(' expression ')' #Parentheses
-    | ('[' value=INT ']')+ # Array
+    : '(' expression ')' #Scope
+    | expression '.length'+ #Length
     | expression op=('++' | '--') #UnaryPostOp
     | op=('++' | '--' | '+' | '-' | '!' | '~') expression #UnaryPreOp
     | expression op=('*' | '/' | '%') expression #BinaryOp
@@ -105,12 +78,15 @@ expression
     | expression op='||' expression #BinaryOp
     | expression op='?:' expression #BinaryOp
     | expression op=('+=' | '-=' | '*=' | '/=' | '%=') expression #BinaryOp
+    | 'new' type=ID '()'? ('[' expression? ']')* #NewObject
+    | className=ID methodCall*  #MethodCalls
     | value=INT #Integer
     | value=ID #Identifier
-    | value=BOOLEAN #Boolean
+    | value=('true' | 'false') #Boolean
+    | expression ('[' expression ']')+ #ArrayAcess
     | value='this' #Self
-    | methodOverVar #CallMethodOverVar
-    | methodCall #CallMethod
-    | value=ID attribute #GetAttribute
     ;
 
+methodCall
+    : '.' methodName=ID ('()' | '(' (expression ','?)* ')' )
+    ;
