@@ -4,18 +4,14 @@ grammar Javamm;
     package pt.up.fe.comp2023;
 }
 
-INT : [1-9][0-9]* ;
+INT : ([0] | [1-9][0-9]*) ;
 ID : [a-zA-Z_$][a-zA-Z_$0-9]* ;
 COMMENTINLINE : '//' ~[\r\n]* -> skip ;
 COMMENTMULTILINE : '/*' .*? '*/' -> skip ;
 WS : [ \t\n\r\f]+ -> skip ;
 
 program
-    : header fullClass
-    ;
-
-header //Header é um conjunto de Imports de Packages
-    : packageImport*
+    : packageImport* fullClass? statement*
     ;
 
 packageImport //Exemplo: 'import JavaRandomPackage' (falta implementar '.')
@@ -73,6 +69,7 @@ statement
 
 expression
     : '(' expression ')' #Parentheses
+    | ('[' value=INT ']')+ # Array
     | expression op=('++' | '--') #UnaryPostOp
     | op=('++' | '--' | '+' | '-' | '!' | '~') expression #UnaryPreOp
     | expression op=('*' | '/' | '%') expression #BinaryOp
