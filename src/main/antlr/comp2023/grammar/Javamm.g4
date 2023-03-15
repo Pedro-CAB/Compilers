@@ -45,7 +45,7 @@ classCode //Conteúdo da Classe
     ;
 
 methodDeclaration //Exemplo: 'public int sum(int x, int y)'
-    : ('public' | 'private')? value=ID methodHeader '{' statement* '}' #MethodReturnType
+    : ('public' | 'private')? ('static')? value=ID methodHeader '{' statement* '}' #MethodReturnType
     ;
 
 methodHeader
@@ -68,6 +68,11 @@ methodCall
 args
     : (value=ID | value=INT | value=BOOLEAN) ',' args
     | (value=ID | value=INT | value=BOOLEAN)
+    ;
+
+attribute
+    : '.' value=ID
+    | '.' value=ID '.' attribute
     ;
 
 statement
@@ -106,5 +111,6 @@ expression
     | value='this' #Self
     | methodOverVar #CallMethodOverVar
     | methodCall #CallMethod
+    | value=ID attribute #GetAttribute
     ;
 
