@@ -14,8 +14,12 @@ program
     : packageImport* classDeclaration '{' classCode '}' statement*
     ;
 
-packageImport //Exemplo: 'import JavaRandomPackage' (falta implementar '.')
-    : 'import ' (path=ID '.')* value=ID ';' #ImportPackage
+packageImport
+    : 'import ' path=packagePath value=ID ';' #ImportPackage
+    ;
+
+packagePath
+    : (ID '.')*
     ;
 
 classDeclaration //Declaração da Classe Dividida em Etapas
@@ -88,5 +92,9 @@ expression
     ;
 
 methodCall
-    : '.' methodName=ID ('()' | '(' (expression ','?)* ')' )
+    : '.' methodName=ID ('()' | '(' methodArg* ')' )
+    ;
+
+methodArg
+    : expression ','?
     ;

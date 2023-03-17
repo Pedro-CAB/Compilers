@@ -15,6 +15,7 @@ public class Table implements SymbolTable {
     String class_name, super_class; //classes
 
     Type ret_type;
+    int b;
 
     public Table(){
         this.imports = new ArrayList<>();
@@ -25,10 +26,11 @@ public class Table implements SymbolTable {
         this.class_name = "";
         this.super_class = "";
         this.ret_type = new Type("", false);
+        this.b = 1;
     }
 
-    public void setImports(List<String> imports) {
-        this.imports = imports;
+    public void addImports(String imports) {
+        this.imports.add(imports);
     }
 
     @Override

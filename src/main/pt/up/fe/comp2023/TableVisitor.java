@@ -25,10 +25,11 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
     @Override
     protected void buildVisitor() {
-        addVisit("packageImport", this::dealWithImports);
-        addVisit("Class Name", this::dealWithClassName);
+        addVisit("ImportPackage", this::dealWithImports);
+        addVisit("Program", this::dealWithProgram);
+        addVisit("ClassDeclaration", this::dealWithClassName);
         addVisit("Super", this::dealWithSuper);
-        addVisit("Fields", this::dealWithFields);
+        addVisit("ClassCode", this::dealWithFields);
         addVisit("Methods", this::dealWithMethods);
         addVisit("RetType", this::dealWithRetType);
         addVisit("Parameters", this::dealWithParameters);
@@ -36,18 +37,25 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
     }
 
+    private String dealWithProgram(JmmNode jmmNode, String s){
+        StringBuilder sBuilder = new StringBuilder(s != null ? s : "");
+
+        for(JmmNode child : jmmNode.getChildren()) {
+             sBuilder.append(visit(child, ""));
+         }
+
+        return sBuilder.toString();
+    }
+
     private String dealWithImports(JmmNode jmmNode, String s){
         s = s != null?s:"";
         List<String> imports = new ArrayList<>();
-        String ret = s+"import " + jmmNode.getObject("path");
-
-        ret += jmmNode.getObject("value");
+        String ret = s+"import " + jmmNode.get("value");
 
         ret += ";";
 
         imports.add(ret);
-
-        this.table.setImports(imports);
+        this.table.addImports(ret);
 
         return "";
     }
