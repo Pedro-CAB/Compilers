@@ -2,6 +2,7 @@ package pt.up.fe.comp2023;
 
 import pt.up.fe.comp.jmm.analysis.JmmAnalysis;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
+import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -13,6 +14,15 @@ import java.util.Objects;
 public class TableVisitor extends AJmmVisitor<String, String> {
 
     Table table = new Table();
+
+     public TableVisitor(Table table){
+        this.table = table;
+    }
+
+    public Table getTable() {
+        return table;
+    }
+
     @Override
     protected void buildVisitor() {
         addVisit("packageImport", this::dealWithImports);
@@ -29,23 +39,15 @@ public class TableVisitor extends AJmmVisitor<String, String> {
     private String dealWithImports(JmmNode jmmNode, String s){
         s = s != null?s:"";
         List<String> imports = new ArrayList<>();
-        String ret = s+"import " + jmmNode.get("path");
-        String s1 = "";
-        for (JmmNode child :jmmNode.getChildren()){
+        String ret = s+"import " + jmmNode.getObject("path");
 
-            ret += visit(child, s1);
-
-        }
-
-        ret += ".";
-
-        ret += jmmNode.get("value");
+        ret += jmmNode.getObject("value");
 
         ret += ";";
 
         imports.add(ret);
 
-        table.setImports(imports);
+        this.table.setImports(imports);
 
         return "";
     }

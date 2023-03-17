@@ -9,11 +9,11 @@ public class Analysis implements JmmAnalysis {
 
     public JmmSemanticsResult semanticAnalysis(JmmParserResult parserResult){
 
-        TableVisitor visitor = new TableVisitor();
+        Table table = new Table();
 
-        Table table = visitor.table;
+        TableVisitor visitor = new TableVisitor(table);
 
-        return new JmmSemanticsResult(parserResult, table, parserResult.getReports());
+        return new JmmSemanticsResult(parserResult, visitor.getTable(), parserResult.getReports());
     }
 }
 
