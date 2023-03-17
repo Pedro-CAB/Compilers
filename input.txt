@@ -1,4 +1,7 @@
 class A extends B{
     int a = 0;
-
+    if (a == b)
+        a = b;
+        b = c;
+    d = e;
 }
