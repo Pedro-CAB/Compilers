@@ -29,11 +29,13 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         addVisit("Program", this::dealWithProgram);
         addVisit("ClassDeclaration", this::dealWithClassName);
         addVisit("Super", this::dealWithSuper);
-        addVisit("ClassCode", this::dealWithFields);
+        addVisit("ClassCode", this::dealWithParameters);
+        addVisit("Fields", this::dealWithFields);
         addVisit("Methods", this::dealWithMethods);
         addVisit("RetType", this::dealWithRetType);
         addVisit("Parameters", this::dealWithParameters);
         addVisit("LocalVar", this::dealWithLocalVars);
+        addVisit("MethodDeclaration", this::dealWithMethodDeclaration);
 
     }
 
@@ -49,12 +51,11 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
     private String dealWithImports(JmmNode jmmNode, String s){
         s = s != null?s:"";
-        List<String> imports = new ArrayList<>();
+
         String ret = s+"import " + jmmNode.get("value");
 
         ret += ";";
 
-        imports.add(ret);
         this.table.addImports(ret);
 
         return "";
@@ -81,21 +82,15 @@ public class TableVisitor extends AJmmVisitor<String, String> {
     }
 
     private String dealWithFields(JmmNode jmmNode, String s){
-        //TODO
 
-        List<Symbol> fields = new ArrayList<>();
+         //TODO
+         return "";
 
-        table.setFields(fields);
-
-        return "";
     }
 
     private String dealWithMethods(JmmNode jmmNode, String s){
+
         //TODO
-
-        List<String> methods = new ArrayList<>();
-
-        table.setMethods(methods);
 
         return "";
     }
@@ -110,8 +105,62 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
+    private String dealWithMethodDeclaration(JmmNode jmmNode, String s){
+
+         for (JmmNode child : jmmNode.getChildren()){
+
+             if (Objects.equals(child.getKind(), "Argument")){
+
+                 String type_name = child.get("type");
+
+                 Type type = new Type(type_name, false);
+                 String var = child.get("var");
+
+                 Symbol parameter = new Symbol(type, var);
+
+                 table.addParameters(parameter);
+             }
+         }
+
+
+         /*
+
+         String type_name = "";
+
+         Type type;
+
+         type_name += jmmNode.get("type");
+
+         type = new Type(type_name, false);
+
+         String value = jmmNode.get("value");
+
+         Symbol parameter = new Symbol(type, value);
+
+        table.addParameters(parameter);*/
+
+         return "";
+    }
+
+
+
     private String dealWithParameters(JmmNode jmmNode, String s){
-        //TODO
+
+         for (JmmNode child : jmmNode.getChildren()){
+
+             if (Objects.equals(child.getKind(), "MethodDeclaration")){
+
+                 this.dealWithMethodDeclaration(child, s);
+
+                 String method = child.getKind();
+
+                 this.table.addMethods(method);
+
+                 //visit(child, s);
+             }
+
+         }
+
         return "";
     }
 

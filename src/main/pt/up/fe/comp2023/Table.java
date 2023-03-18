@@ -58,6 +58,10 @@ public class Table implements SymbolTable {
         this.fields = fields;
     }
 
+    public void addFields(Symbol field){this.fields.add(field);}
+
+
+
     @Override
     public List<Symbol> getFields() {
         return fields;
@@ -66,6 +70,8 @@ public class Table implements SymbolTable {
     public void setMethods(List<String> methods) {
         this.methods = methods;
     }
+
+    public void addMethods(String method) {this.methods.add(method);}
 
     @Override
     public List<String> getMethods() {
@@ -83,6 +89,9 @@ public class Table implements SymbolTable {
     public void setParameters(List<Symbol> parameters) {
         this.parameters = parameters;
     }
+
+    public void addParameters(Symbol parameter){this.parameters.add(parameter);}
+
 
     public List<Symbol> getParameters(String methodSignature) {
 
