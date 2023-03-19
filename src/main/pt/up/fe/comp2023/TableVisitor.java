@@ -23,26 +23,28 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
     @Override
     protected void buildVisitor() {
-        addVisit("ImportPackage", this::dealWithImports);
         addVisit("Program", this::dealWithProgram);
+        addVisit("ImportPackage", this::dealWithImports);
         addVisit("ClassDeclaration", this::dealWithClassDeclaration);
-        addVisit("Super", this::dealWithSuper);
+        addVisit("SuperclassName", this::dealWithSuper);
+        addVisit("ImplementedClass", this::dealWithImplemented);
         addVisit("ClassBody", this::dealWithClassBody);
         addVisit("ClassField", this::dealWithFields);
         addVisit("ClassMethod", this::dealWithMethods);
         addVisit("ClassArrayMethod", this::dealWithMethods);
-        addVisit("classIdentification", this::dealWithClassIdentification);
+        addVisit("ClassName", this::dealWithClassName);
         addVisit("MethodBody", this::dealWithMethodBody);
     }
 
     private String dealWithProgram(JmmNode jmmNode, String s) {
-        StringBuilder sBuilder = new StringBuilder(s != null ? s : "");
+        StringBuilder ret = new StringBuilder(s != null ? s : "");
 
         for (JmmNode child : jmmNode.getChildren()) {
-            sBuilder.append(visit(child, ""));
+            ret.append(visit(child, ""));
         }
+        ret.append("\n}\n");
 
-        return sBuilder.toString();
+        return ret.toString();
     }
 
     private String dealWithImports(JmmNode jmmNode, String s) {
@@ -50,139 +52,156 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         StringBuilder ret = new StringBuilder();
 
         while (jmmNode.getNumChildren() != 0){
-            ret.insert(0, jmmNode.get("value"));
             jmmNode = jmmNode.getJmmChild(0);
+            ret.insert(0, jmmNode.get("value") + ".");
         }
+        ret.deleteCharAt(ret.length()-1);
         ret.insert(0, s + "import ");
-        ret.append(";");
+        ret.append(";\n");
 
         this.table.addImports(ret.toString());
 
         return ret.toString();
     }
 
-    private String dealWithClassName(JmmNode jmmNode, String s) {
-
-        String class_name = jmmNode.get("value");
-
-        table.setClassName(class_name);
-
-        return "";
-    }
-
-
-    private String dealWithClassIdentification(JmmNode jmmNode, String s) {
+    private String dealWithClassDeclaration(JmmNode jmmNode, String s) {
+        StringBuilder ret = new StringBuilder(s != null ? s : "");
+        ret.append("\n");
 
         for (JmmNode child : jmmNode.getChildren()) {
-
-            if (Objects.equals(child.getKind(), "className")) {
-                this.dealWithClassName(child, s);
-            } else if (Objects.equals(child.getKind(), "SuperclassName")
-                    || Objects.equals(child.getKind(), "ImplementedClass")) {
-                this.dealWithSuper(child, s);
-            }
-
+            ret.append(visit(child, "")).append(" ");
         }
+        ret.append("{");
 
-        return "";
+        return ret.toString();
+    }
+
+    private String dealWithClassName(JmmNode jmmNode, String s) {
+        StringBuilder ret = new StringBuilder(s != null ? s : "");
+        String class_name = jmmNode.get("value");
+
+        ret.append("Class ").append(class_name);
+        table.setClassName(class_name);
+
+        return ret.toString();
     }
 
 
     private String dealWithSuper(JmmNode jmmNode, String s) {
+        StringBuilder ret = new StringBuilder(s != null ? s : "");
         String sup = jmmNode.get("value");
 
+        ret.append("extends ").append(sup);
         table.setSuper(sup);
 
-        return "";
+        return ret.toString();
     }
 
-    private String dealWithClassDeclaration(JmmNode jmmNode, String s) {
+    private String dealWithImplemented(JmmNode jmmNode, String s) {
+        StringBuilder ret = new StringBuilder(s != null ? s : "");
 
-        for (JmmNode child : jmmNode.getChildren()) {
-            if (Objects.equals(child.getKind(), "ClassName")) {
-                this.dealWithClassName(child, s);
-            } else if (Objects.equals(child.getKind(), "SuperclassName")
-                    || Objects.equals(child.getKind(), "ImplementedClass")) {
-                this.dealWithSuper(child, s);
-            }
-        }
+        String imp = jmmNode.get("value");
+        ret.append("implements ").append(imp);
 
-        return "";
+        return ret.toString();
     }
 
     private String dealWithClassBody(JmmNode jmmNode, String s) {
-        StringBuilder sBuilder = new StringBuilder(s);
+        StringBuilder ret = new StringBuilder(s != null ? s : "");
         for (JmmNode child : jmmNode.getChildren()) {
-            sBuilder.append(visit(child, ""));
+            ret.append(visit(child, "\n\t"));
         }
-        s = sBuilder.toString();
+        s = ret.toString();
 
         return s;
     }
 
     private String dealWithFields(JmmNode jmmNode, String s) {
+        StringBuilder ret = new StringBuilder();
         JmmNode declaration = jmmNode.getJmmChild(0);
+        boolean isArray = Objects.equals(jmmNode.getJmmChild(0).getKind(), "ArrayType");
 
         String type_name = declaration.getJmmChild(0).get("type");
-        Type type = new Type(type_name, Objects.equals(jmmNode.getJmmChild(0).getKind(), "ArrayType"));
+        Type type = new Type(type_name, isArray);
 
         String var = jmmNode.getJmmChild(0).get("var");
         Symbol field = new Symbol(type, var);
 
+        ret.append(s).append(type_name);
+        if(isArray) ret.append("[]");
+        ret.append(" ").append(var).append(";");
+
         table.addFields(field);
 
-        return "";
+        return ret.toString();
     }
 
     private String dealWithMethods(JmmNode jmmNode, String s) {
+        StringBuilder ret = new StringBuilder();
         List<Symbol> parameters = new ArrayList<>();
-        StringBuilder sBuilder = new StringBuilder(s);
+        ret.append(s).append(s);
 
         table.addMethods(jmmNode.get("name"));
 
         for (JmmNode child : jmmNode.getChildren()) {
             switch (child.getKind()) {
+                case "Modifier":
+                    ret.append(child.get("value")).append(" ");
+                    break;
                 case "Type":
+                    ret.append(child.get("type")).append(" ").append(jmmNode.get("name")).append("(");
                     table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), false));
                     break;
                 case "ArrayType":
+                    ret.append(child.get("type")).append("[] ").append(jmmNode.get("name")).append("(");
                     table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), true));
                     break;
                 case "Argument":
-                    if (Objects.equals(child.getJmmChild(0).getKind(), "Type"))
+                    if (Objects.equals(child.getJmmChild(0).getKind(), "Type")){
+                        ret.append(child.getJmmChild(0).get("type")).append(" ").append(child.get("var")).append(", ");
                         parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
-                    else if (Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
+                    }
+                    else if (Objects.equals(child.getJmmChild(0).getKind(), "ArrayType")){
+                        ret.append(child.getJmmChild(0).get("type")).append("[] ").append(child.get("var")).append(", ");
                         parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
+                    }
                     break;
                 case "MethodBody":
-                    sBuilder.append(visit(child, ""));
+                    if(parameters.size() != 0) ret.setLength(ret.length()-2);
+                    ret.append(") {");
+                    ret.append(visit(child, "\n\t\t"));
+                    ret.append(s).append("}");
                     break;
                 default:
                     break;
             }
         }
 
-        s = sBuilder.toString();
         table.setParameters(jmmNode.get("name"), parameters);
 
-        return "";
+        return ret.toString();
     }
 
     private String dealWithMethodBody(JmmNode jmmNode, String s) {
+        StringBuilder ret = new StringBuilder();
         List<Symbol> localVars = new ArrayList<>();
 
         for (JmmNode child : jmmNode.getChildren()) {
+            if(Objects.equals(child.getKind(), "Return")) ret.append(s).append("return ").append(child.getJmmChild(0).get("value")).append(";");
             if(!Objects.equals(child.getKind(), "Declaration")) continue;
 
-            if (Objects.equals(child.getJmmChild(0).getKind(), "Type"))
+            if (Objects.equals(child.getJmmChild(0).getKind(), "Type")){
+                ret.append(s).append(child.getJmmChild(0).get("type")).append(" ").append(child.get("var")).append(";");
                 localVars.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
-            else if (Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
+            }
+            else if (Objects.equals(child.getJmmChild(0).getKind(), "ArrayType")){
+                ret.append(s).append(child.getJmmChild(0).get("type")).append("[] ").append(child.get("var")).append(";");
                 localVars.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
-
+            }
         }
 
         table.setLocalVariables(jmmNode.getJmmParent().get("name"), localVars);
 
-        return "";
+        return ret.toString();
     }
 }

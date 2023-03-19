@@ -1,5 +1,9 @@
 
+import pack.mypackage;
+
 class LocalVars{
+    int b;
+    int a;
 
 	public int all(){
 	    int b = 1;
