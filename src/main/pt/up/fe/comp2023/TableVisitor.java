@@ -32,6 +32,8 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         addVisit("ClassMethod", this::dealWithMethods);
         addVisit("ClassArrayMethod", this::dealWithMethods);
         addVisit("classIdentification", this::dealWithClassIdentification);
+        addVisit("MethodBody", this::dealWithMethodBody);
+        addVisit("Declaration", this::dealWithDeclaration);
     }
 
     private String dealWithProgram(JmmNode jmmNode, String s) {
@@ -114,6 +116,38 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
         return s;
     }
+
+    private String dealWithMethodBody(JmmNode jmmNode, String s){
+
+        for (JmmNode child : jmmNode.getChildren()){
+            if (Objects.equals(child.getKind(), "Declaration")){
+                this.dealWithDeclaration(child, s);
+            }
+        }
+
+
+        return s;
+    }
+
+    private String dealWithDeclaration(JmmNode jmmNode, String s){
+
+        List<Symbol> local_var = new ArrayList<>();
+
+        for (JmmNode child : jmmNode.getChildren()) {
+            if(Objects.equals(child.getJmmChild(0).getKind(), "Type"))
+                local_var.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
+            else if(Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
+                local_var.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
+
+        }
+
+        table.setLocalVariables(jmmNode.get("name"), local_var);
+
+        return s;
+    }
+
+
+
 
     private String dealWithFields(JmmNode jmmNode, String s) {
         JmmNode declaration = jmmNode.getJmmChild(0);

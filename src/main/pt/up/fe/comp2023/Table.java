@@ -12,8 +12,8 @@ public class Table implements SymbolTable {
 
     List<String> imports, methods;
     HashMap<String, Type> methodRet;
-    HashMap<String, List<Symbol>> parameters;
-    List<Symbol> fields, local_var;
+    HashMap<String, List<Symbol>> parameters, local_var;
+    List<Symbol> fields;
     String class_name, super_class;
 
     int b;
@@ -23,7 +23,7 @@ public class Table implements SymbolTable {
         this.methods = new ArrayList<>();
         this.fields = new ArrayList<>();
         this.parameters = new HashMap<>();
-        this.local_var = new ArrayList<>();
+        this.local_var = new HashMap<>();
         this.class_name = "";
         this.super_class = "";
         this.methodRet = new HashMap<>();
@@ -94,11 +94,11 @@ public class Table implements SymbolTable {
         return parameters.get(methodSignature);
     }
 
-    public void setLocalVariables(List<Symbol> local_var) {
-        this.local_var = local_var;
+    public void setLocalVariables(String methodSignature,List<Symbol> local_var) {
+        this.local_var.put(methodSignature, local_var);
     }
     public List<Symbol> getLocalVariables(String methodSignature){
 
-        return local_var;
+        return local_var.get(methodSignature);
     }
 }
