@@ -31,7 +31,6 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         addVisit("ClassField", this::dealWithFields);
         addVisit("ClassMethod", this::dealWithMethods);
         addVisit("ClassArrayMethod", this::dealWithMethods);
-        addVisit("Parameters", this::dealWithParameters);
         addVisit("classIdentification", this::dealWithClassIdentification);
     }
 
@@ -143,27 +142,10 @@ public class TableVisitor extends AJmmVisitor<String, String> {
                 if(Objects.equals(child.getJmmChild(0).getKind(), "Type"))
                     parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
                 else if(Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
-                    parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
+                    parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
             }
         }
         table.setParameters(jmmNode.get("name"), parameters);
-
-        return "";
-    }
-
-
-    private String dealWithParameters(JmmNode jmmNode, String s) {
-        for (JmmNode child : jmmNode.getChildren()) {
-            if (Objects.equals(child.getKind(), "Argument")) {
-                String type_name = child.get("type");
-                Type type = new Type(type_name, false);
-
-                String var = child.get("var");
-                Symbol parameter = new Symbol(type, var);
-
-
-            }
-        }
 
         return "";
     }
