@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import pt.up.fe.comp.TestUtils;
+import pt.up.fe.comp.jmm.analysis.JmmAnalysis;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
@@ -44,6 +45,10 @@ public class Launcher {
         System.out.println(parserResult.getRootNode().toTree());
 
         // ... add remaining stages
+        Analysis analysis = new Analysis();
+
+        System.out.println("\n\nPrinting Symbol Table\n");
+        analysis.semanticAnalysis(parserResult);
     }
 
     private static Map<String, String> parseArgs(String[] args) {

@@ -15,11 +15,13 @@ program
     ;
 
 packageImport
-    : 'import ' path=packagePath value=ID ';' #ImportPackage
+    : 'import ' packageName ';' #ImportPackage
     ;
 
-packagePath
-    : (ID '.')*
+
+packageName
+    : value=ID
+    | packageName '.' value=ID
     ;
 
 classDeclaration //Declaração da Classe Dividida em Etapas
@@ -56,10 +58,10 @@ methodBody
     ;
 
 modifier
-    : val='public'
-    | val='private'
-    | val='static'
-    | val='final'
+    : value='public'
+    | value='private'
+    | value='static'
+    | value='final'
     ;
 
 methodArgument
