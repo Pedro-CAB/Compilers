@@ -11,11 +11,15 @@ COMMENTMULTILINE : '/*' .*? '*/' -> skip ;
 WS : [ \t\n\r\f]+ -> skip ;
 
 program
-    : packageImport* classDeclaration '{' classCode '}' statement*
+    : packageImport* classDeclaration '{' classBody '}' statement*
     ;
 
-packageImport //Exemplo: 'import JavaRandomPackage' (falta implementar '.')
-    : 'import ' (path=ID '.')* value=ID ';' #ImportPackage
+packageImport
+    : 'import ' path=packagePath value=ID ';' #ImportPackage
+    ;
+
+packagePath
+    : (ID '.')*
     ;
 
 classDeclaration //Declaração da Classe Dividida em Etapas
@@ -23,7 +27,7 @@ classDeclaration //Declaração da Classe Dividida em Etapas
     ;
 
 classIdentification //Definição de Acessos e nome da classe
-    : ('public'|'private')? 'class' value=ID #ClassName
+    : modifier* 'class' value=ID #ClassName
     ;
 
 classExtends //Classe Extendida pela Classe Criada (só pode extender no máximo uma)
@@ -35,16 +39,36 @@ classImplements //Classes Implementadas pela Classe Criada (podem ser várias ou
     | classImplements classImplements #ImplementedClasses
     ;
 
-classCode //Conteúdo da Classe
-    : (statement | classMethod)*
+classBody //Conteúdo da Classe
+    : (classField | method)*
     ;
 
-classMethod //Exemplo: 'public int sum(int x, int y)'
-    : ('public' | 'private' | 'static' )? type=ID name=ID '(' (methodArgument ','?)* ')' '{' statement* '}' #MethodDeclaration
+classField
+    : statement
+    ;
+
+method //Exemplo: 'public int sum(int x, int y)'
+    : modifier* varType name=ID ('()' | '(' (methodArgument ','?)* ')') methodBody #ClassMethod
+    ;
+
+methodBody
+    : '{' statement* '}'
+    ;
+
+modifier
+    : val='public'
+    | val='private'
+    | val='static'
+    | val='final'
     ;
 
 methodArgument
-    : type=ID '[]'? var=ID #Argument
+    : varType var=ID #Argument
+    ;
+
+varType
+    : type=ID #Type
+    | type=ID '[]' #ArrayType
     ;
 
 statement
@@ -53,8 +77,7 @@ statement
     | 'while' '(' expression ')' statement #While
     | 'switch' '(' expression ')' '{' ('case' expression ':' statement* ('break' ';')?)* 'default' ':' statement* ('break' ';')? '}' #Switch
     | '{' statement* '}' #NestedStatements
-    | type=ID '[]' var=ID ('=' expression)? ';' #ArrayDeclaration
-    | type=ID var=ID ('=' expression)? ';' #Declaration
+    | varType var=ID ('=' expression)? ';' #Declaration
     | var=ID '=' expression ';' #Assignment
     | var=ID '[' expression ']' '=' expression ';' #ArrayAssignment
     | 'return' expression ';' #Return
@@ -79,14 +102,18 @@ expression
     | expression op='?:' expression #BinaryOp
     | expression op=('+=' | '-=' | '*=' | '/=' | '%=') expression #BinaryOp
     | 'new' type=ID '()'? ('[' expression? ']')* #NewObject
-    | className=ID methodCall*  #MethodCalls
     | value=INT #Integer
     | value=ID #Identifier
     | value=('true' | 'false') #Boolean
     | expression ('[' expression ']')+ #ArrayAcess
     | value='this' #Self
+    | className=ID methodCall+  #MethodCalls
     ;
 
 methodCall
-    : '.' methodName=ID ('()' | '(' (expression ','?)* ')' )
+    : '.' methodName=ID ('()' | '(' methodArg* ')' )
+    ;
+
+methodArg
+    : expression ','?
     ;

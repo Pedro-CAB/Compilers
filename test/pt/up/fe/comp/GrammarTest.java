@@ -19,8 +19,8 @@ public class GrammarTest {
 
 
     private static final String IMPORT = "packageImport";
-    private static final String MAIN_METHOD = "classMethod";
-    private static final String INSTANCE_METHOD = "classMethod";
+    private static final String MAIN_METHOD = "method";
+    private static final String INSTANCE_METHOD = "method";
     private static final String STATEMENT = "statement";
     private static final String EXPRESSION = "expression";
 
