@@ -5,7 +5,7 @@ class LocalVars{
 	    int b = 1;
 	    String s = "Hello";
 	    char c = 'c';
-	    String[] s = new String[] {1,2,3};
+	    String[] s = new String[] {"Hello", "World", "!"};
 		return 0;
 	}
 }

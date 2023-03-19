@@ -1,11 +1,11 @@
 
 class LocalVars{
 
-	public int all(int a, boolean b, Parameters maf){
+	public int all(){
 	    int b = 1;
 	    String s = "Hello";
 	    char c = 'c';
-	    String[] s = new String[] {1,2,3};
+	    String[] s = new String[] {"Hello", "World", "!"};
 		return 0;
 	}
 }
