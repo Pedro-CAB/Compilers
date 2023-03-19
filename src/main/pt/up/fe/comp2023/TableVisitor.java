@@ -187,7 +187,7 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         List<Symbol> localVars = new ArrayList<>();
 
         for (JmmNode child : jmmNode.getChildren()) {
-            if(Objects.equals(child.getKind(), "Return")) ret.append(s).append("return ").append(child.getJmmChild(0).get("value"));
+            if(Objects.equals(child.getKind(), "Return")) ret.append(s).append("return ").append(child.getJmmChild(0).get("value")).append(";");
             if(!Objects.equals(child.getKind(), "Declaration")) continue;
 
             if (Objects.equals(child.getJmmChild(0).getKind(), "Type")){
