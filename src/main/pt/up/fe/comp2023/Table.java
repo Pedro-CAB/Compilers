@@ -5,27 +5,28 @@ import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class Table implements SymbolTable {
 
     List<String> imports, methods;
+    HashMap<String, Type> methodRet;
+    HashMap<String, List<Symbol>> parameters;
+    List<Symbol> fields, local_var;
+    String class_name, super_class;
 
-    List<Symbol> fields, parameters, local_var;
-    String class_name, super_class; //classes
-
-    Type ret_type;
     int b;
 
     public Table(){
         this.imports = new ArrayList<>();
         this.methods = new ArrayList<>();
         this.fields = new ArrayList<>();
-        this.parameters = new ArrayList<>();
+        this.parameters = new HashMap<>();
         this.local_var = new ArrayList<>();
         this.class_name = "";
         this.super_class = "";
-        this.ret_type = new Type("", false);
+        this.methodRet = new HashMap<>();
         this.b = 1;
     }
 
@@ -60,8 +61,6 @@ public class Table implements SymbolTable {
 
     public void addFields(Symbol field){this.fields.add(field);}
 
-
-
     @Override
     public List<Symbol> getFields() {
         return fields;
@@ -78,24 +77,21 @@ public class Table implements SymbolTable {
         return methods;
     }
 
-    public void setReturnType(Type ret_type) {
-        this.ret_type = ret_type;
+    public void addReturnType(String methodSignature, Type ret_type) {
+        this.methodRet.put(methodSignature, ret_type);
     }
 
     public Type getReturnType(String methodSignature) {
-        return ret_type;
+        return methodRet.get(methodSignature);
     }
 
-    public void setParameters(List<Symbol> parameters) {
-        this.parameters = parameters;
+    public void setParameters(String methodSignature, List<Symbol> parameters) {
+        this.parameters.put(methodSignature, parameters);
     }
-
-    public void addParameters(Symbol parameter){this.parameters.add(parameter);}
 
 
     public List<Symbol> getParameters(String methodSignature) {
-
-        return parameters;
+        return parameters.get(methodSignature);
     }
 
     public void setLocalVariables(List<Symbol> local_var) {
