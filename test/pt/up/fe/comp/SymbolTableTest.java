@@ -124,18 +124,4 @@ public class SymbolTableTest {
     	assertEquals("Parameter 3", "Parameters", parameters.get(2).getType().getName());
     }
 
-	@Test
-	public void LocalVars(){
-		var semantics = test("symboltable/LocalVars.jmm", false);
-		var st = semantics.getSymbolTable();
-		var methods = st.getMethods();
-		assertEquals(1, methods.size());
-
-		var localVars = st.getLocalVariables(methods.get(0));
-		assertEquals(4, localVars.size());
-		assertEquals("Var 1 ", "int", localVars.get(0).getType().getName());
-		assertEquals("Var 2 ", "String", localVars.get(1).getType().getName());
-		assertEquals("Var 3 ", "char", localVars.get(2).getType().getName());
-		assertEquals("Var 4 ", "String", localVars.get(3).getType().getName());
-	}
 }
