@@ -1,8 +1,6 @@
 package pt.up.fe.comp2023;
 
-import pt.up.fe.comp.jmm.analysis.JmmAnalysis;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
-import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
@@ -13,7 +11,7 @@ import java.util.Objects;
 
 public class TableVisitor extends AJmmVisitor<String, String> {
 
-    Table table = new Table();
+    Table table;
 
     public TableVisitor(Table table) {
         this.table = table;
@@ -27,16 +25,14 @@ public class TableVisitor extends AJmmVisitor<String, String> {
     protected void buildVisitor() {
         addVisit("ImportPackage", this::dealWithImports);
         addVisit("Program", this::dealWithProgram);
-        addVisit("ClassDeclaration", this::dealWithClassName);
+        addVisit("ClassDeclaration", this::dealWithClassDeclaration);
         addVisit("Super", this::dealWithSuper);
         addVisit("ClassBody", this::dealWithClassBody);
         addVisit("ClassField", this::dealWithFields);
         addVisit("ClassMethod", this::dealWithMethods);
         addVisit("ClassArrayMethod", this::dealWithMethods);
-        addVisit("Return", this::dealWithRetType);
         addVisit("Parameters", this::dealWithParameters);
-        addVisit("Declaration", this::dealWithDeclaration);
-        addVisit("ArrayDeclaration", this::dealWithDeclaration);
+        addVisit("classIdentification", this::dealWithClassIdentification);
     }
 
     private String dealWithProgram(JmmNode jmmNode, String s) {
@@ -58,12 +54,54 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
-    private String dealWithClassName(JmmNode jmmNode, String s) {
+    private String dealWithClassName(JmmNode jmmNode, String s){
 
-        //TODO
-        String class_name = "";
+        String class_name = jmmNode.get("value");
 
         table.setClassName(class_name);
+
+        return "";
+    }
+
+
+    private String dealWithClassIdentification(JmmNode jmmNode, String s){
+
+        for (JmmNode child: jmmNode.getChildren()){
+
+            if (Objects.equals(child.getKind(), "className")){
+                this.dealWithClassName(child, s);
+            }
+
+            else if (Objects.equals(child.getKind(), "SuperclassName")
+                    || Objects.equals(child.getKind(), "ImplementedClass")){
+                this.dealWithSuper(child, s);
+            }
+
+        }
+
+        return "";
+    }
+
+
+    private String dealWithSuper(JmmNode jmmNode, String s) {
+        String sup = jmmNode.get("value");
+
+        table.setSuper(sup);
+
+        return "";
+    }
+
+    private String dealWithClassDeclaration(JmmNode jmmNode, String s) {
+
+        for (JmmNode child : jmmNode.getChildren()){
+            if (Objects.equals(child.getKind(), "ClassName")){
+                this.dealWithClassName(child, s);
+            }
+            else if (Objects.equals(child.getKind(), "SuperclassName")
+                    || Objects.equals(child.getKind(), "ImplementedClass")){
+                this.dealWithSuper(child, s);
+            }
+        }
 
         return "";
     }
@@ -76,17 +114,6 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         s = sBuilder.toString();
 
         return s;
-    }
-
-
-    private String dealWithSuper(JmmNode jmmNode, String s) {
-        //TODO
-
-        String sup = "";
-
-        table.setSuper(sup);
-
-        return "";
     }
 
     private String dealWithFields(JmmNode jmmNode, String s) {
@@ -124,14 +151,6 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
-    private String dealWithRetType(JmmNode jmmNode, String s) {
-        //TODO
-
-        Type ret_type = new Type("", false);
-
-        return "";
-    }
-
 
     private String dealWithParameters(JmmNode jmmNode, String s) {
         for (JmmNode child : jmmNode.getChildren()) {
@@ -141,14 +160,11 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
                 String var = child.get("var");
                 Symbol parameter = new Symbol(type, var);
+
+
             }
         }
 
-        return "";
-    }
-
-    private String dealWithDeclaration(JmmNode jmmNode, String s) {
-        //TODO
         return "";
     }
 
