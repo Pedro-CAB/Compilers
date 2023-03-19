@@ -102,7 +102,9 @@ expression
     | expression op='||' expression #BinaryOp
     | expression op='?:' expression #BinaryOp
     | expression op=('+=' | '-=' | '*=' | '/=' | '%=') expression #BinaryOp
-    | 'new' type=ID '()'? ('[' expression? ']')* #NewObject
+    | 'new' varType '()'? (('[' expression? ']')* | '[]' '{' expression? (',' expression)* '}' ) #NewObject
+    | '"' value=ID '"' #String
+    | '\'' value=ID '\'' #Char
     | value=INT #Integer
     | value=ID #Identifier
     | value=('true' | 'false') #Boolean
