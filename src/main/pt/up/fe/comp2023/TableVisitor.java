@@ -139,6 +139,11 @@ public class TableVisitor extends AJmmVisitor<String, String> {
             else if(Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
                 local_var.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
 
+            if (Objects.equals(child.getKind(), "Return"))
+                table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), false));
+            else if (Objects.equals(child.getKind(), "ArrayType"))
+                table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), true));
+
         }
 
         table.setLocalVariables(jmmNode.get("name"), local_var);
@@ -164,15 +169,17 @@ public class TableVisitor extends AJmmVisitor<String, String> {
     }
 
     private String dealWithMethods(JmmNode jmmNode, String s) {
+
         List<Symbol> parameters = new ArrayList<>();
         table.addMethods(jmmNode.get("name"));
 
         for (JmmNode child : jmmNode.getChildren()) {
+
             if (Objects.equals(child.getKind(), "Type"))
                 table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), false));
             else if (Objects.equals(child.getKind(), "ArrayType"))
                 table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), true));
-            else if (Objects.equals(child.getKind(), "Argument")){
+            if (Objects.equals(child.getKind(), "Argument")){
                 if(Objects.equals(child.getJmmChild(0).getKind(), "Type"))
                     parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
                 else if(Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
