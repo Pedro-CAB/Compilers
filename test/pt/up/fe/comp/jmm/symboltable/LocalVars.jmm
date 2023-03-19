@@ -1,7 +1,7 @@
 
 class LocalVars{
 
-	public int all(int a, boolean b, Parameters maf){
+	public int all(){
 	    int b = 1;
 	    String s = "Hello";
 	    char c = 'c';

@@ -33,7 +33,6 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         addVisit("ClassArrayMethod", this::dealWithMethods);
         addVisit("classIdentification", this::dealWithClassIdentification);
         addVisit("MethodBody", this::dealWithMethodBody);
-        addVisit("Declaration", this::dealWithDeclaration);
     }
 
     private String dealWithProgram(JmmNode jmmNode, String s) {
@@ -55,7 +54,7 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
-    private String dealWithClassName(JmmNode jmmNode, String s){
+    private String dealWithClassName(JmmNode jmmNode, String s) {
 
         String class_name = jmmNode.get("value");
 
@@ -65,16 +64,14 @@ public class TableVisitor extends AJmmVisitor<String, String> {
     }
 
 
-    private String dealWithClassIdentification(JmmNode jmmNode, String s){
+    private String dealWithClassIdentification(JmmNode jmmNode, String s) {
 
-        for (JmmNode child: jmmNode.getChildren()){
+        for (JmmNode child : jmmNode.getChildren()) {
 
-            if (Objects.equals(child.getKind(), "className")){
+            if (Objects.equals(child.getKind(), "className")) {
                 this.dealWithClassName(child, s);
-            }
-
-            else if (Objects.equals(child.getKind(), "SuperclassName")
-                    || Objects.equals(child.getKind(), "ImplementedClass")){
+            } else if (Objects.equals(child.getKind(), "SuperclassName")
+                    || Objects.equals(child.getKind(), "ImplementedClass")) {
                 this.dealWithSuper(child, s);
             }
 
@@ -94,12 +91,11 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
     private String dealWithClassDeclaration(JmmNode jmmNode, String s) {
 
-        for (JmmNode child : jmmNode.getChildren()){
-            if (Objects.equals(child.getKind(), "ClassName")){
+        for (JmmNode child : jmmNode.getChildren()) {
+            if (Objects.equals(child.getKind(), "ClassName")) {
                 this.dealWithClassName(child, s);
-            }
-            else if (Objects.equals(child.getKind(), "SuperclassName")
-                    || Objects.equals(child.getKind(), "ImplementedClass")){
+            } else if (Objects.equals(child.getKind(), "SuperclassName")
+                    || Objects.equals(child.getKind(), "ImplementedClass")) {
                 this.dealWithSuper(child, s);
             }
         }
@@ -117,38 +113,6 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         return s;
     }
 
-    private String dealWithMethodBody(JmmNode jmmNode, String s){
-
-        for (JmmNode child : jmmNode.getChildren()){
-            if (Objects.equals(child.getKind(), "Declaration")){
-                this.dealWithDeclaration(child, s);
-            }
-        }
-
-
-        return s;
-    }
-
-    private String dealWithDeclaration(JmmNode jmmNode, String s){
-
-        List<Symbol> local_var = new ArrayList<>();
-
-        for (JmmNode child : jmmNode.getChildren()) {
-            if(Objects.equals(child.getJmmChild(0).getKind(), "Type"))
-                local_var.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
-            else if(Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
-                local_var.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
-
-        }
-
-        table.setLocalVariables(jmmNode.get("name"), local_var);
-
-        return s;
-    }
-
-
-
-
     private String dealWithFields(JmmNode jmmNode, String s) {
         JmmNode declaration = jmmNode.getJmmChild(0);
 
@@ -165,24 +129,52 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
     private String dealWithMethods(JmmNode jmmNode, String s) {
         List<Symbol> parameters = new ArrayList<>();
+        StringBuilder sBuilder = new StringBuilder(s);
+
         table.addMethods(jmmNode.get("name"));
 
         for (JmmNode child : jmmNode.getChildren()) {
-            if (Objects.equals(child.getKind(), "Type"))
-                table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), false));
-            else if (Objects.equals(child.getKind(), "ArrayType"))
-                table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), true));
-            else if (Objects.equals(child.getKind(), "Argument")){
-                if(Objects.equals(child.getJmmChild(0).getKind(), "Type"))
-                    parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
-                else if(Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
-                    parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
+            switch (child.getKind()) {
+                case "Type":
+                    table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), false));
+                    break;
+                case "ArrayType":
+                    table.addReturnType(jmmNode.get("name"), new Type(child.get("type"), true));
+                    break;
+                case "Argument":
+                    if (Objects.equals(child.getJmmChild(0).getKind(), "Type"))
+                        parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
+                    else if (Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
+                        parameters.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
+                    break;
+                case "MethodBody":
+                    sBuilder.append(visit(child, ""));
+                    break;
+                default:
+                    break;
             }
         }
+
+        s = sBuilder.toString();
         table.setParameters(jmmNode.get("name"), parameters);
 
         return "";
     }
 
+    private String dealWithMethodBody(JmmNode jmmNode, String s) {
+        List<Symbol> localVars = new ArrayList<>();
 
+        for (JmmNode child : jmmNode.getChildren()) {
+            if(!Objects.equals(child.getKind(), "Declaration")) continue;
+
+            if (Objects.equals(child.getJmmChild(0).getKind(), "Type"))
+                localVars.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
+            else if (Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
+                localVars.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
+        }
+
+        table.setLocalVariables(jmmNode.getJmmParent().get("name"), localVars);
+
+        return "";
+    }
 }

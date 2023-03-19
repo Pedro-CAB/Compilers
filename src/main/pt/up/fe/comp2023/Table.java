@@ -81,6 +81,7 @@ public class Table implements SymbolTable {
         this.methodRet.put(methodSignature, ret_type);
     }
 
+    @Override
     public Type getReturnType(String methodSignature) {
         return methodRet.get(methodSignature);
     }
@@ -89,7 +90,7 @@ public class Table implements SymbolTable {
         this.parameters.put(methodSignature, parameters);
     }
 
-
+    @Override
     public List<Symbol> getParameters(String methodSignature) {
         return parameters.get(methodSignature);
     }
@@ -97,8 +98,9 @@ public class Table implements SymbolTable {
     public void setLocalVariables(String methodSignature,List<Symbol> local_var) {
         this.local_var.put(methodSignature, local_var);
     }
-    public List<Symbol> getLocalVariables(String methodSignature){
 
+    @Override
+    public List<Symbol> getLocalVariables(String methodSignature){
         return local_var.get(methodSignature);
     }
 }
