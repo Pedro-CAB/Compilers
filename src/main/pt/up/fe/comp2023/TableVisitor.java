@@ -178,6 +178,7 @@ public class TableVisitor extends AJmmVisitor<String, String> {
                 localVars.add(new Symbol(new Type(child.getJmmChild(0).get("type"), false), child.get("var")));
             else if (Objects.equals(child.getJmmChild(0).getKind(), "ArrayType"))
                 localVars.add(new Symbol(new Type(child.getJmmChild(0).get("type"), true), child.get("var")));
+
         }
 
         table.setLocalVariables(jmmNode.getJmmParent().get("name"), localVars);
