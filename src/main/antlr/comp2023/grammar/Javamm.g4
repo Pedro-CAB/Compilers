@@ -11,7 +11,7 @@ COMMENTMULTILINE : '/*' .*? '*/' -> skip ;
 WS : [ \t\n\r\f]+ -> skip ;
 
 program
-    : packageImport* classDeclaration '{' classBody '}' statement*
+    : packageImport* (classDeclaration ('{' classBody '}'))? statement*
     ;
 
 packageImport
@@ -75,6 +75,7 @@ statement
     : 'if' '(' expression ')' statement ('else' 'if' '(' expression ')' statement)* ('else' statement )? #IfElse
     | 'do' statement 'while' '(' expression ')' ';' #DoWhile
     | 'while' '(' expression ')' statement #While
+    | 'for' '(' varType? var=ID ('=' expression)? ';' expression ';' expression')' statement #ForCycle
     | 'switch' '(' expression ')' '{' ('case' expression ':' statement* ('break' ';')?)* 'default' ':' statement* ('break' ';')? '}' #Switch
     | '{' statement* '}' #NestedStatements
     | varType var=ID ('=' expression)? ';' #Declaration
