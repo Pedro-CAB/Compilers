@@ -34,6 +34,8 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         addVisit("ClassArrayMethod", this::dealWithMethods);
         addVisit("ClassName", this::dealWithClassName);
         addVisit("MethodBody", this::dealWithMethodBody);
+        addVisit("MethodCalls", this::dealWithMethodCalls);
+        addVisit("Return", this::dealWithReturn);
     }
 
     private String dealWithProgram(JmmNode jmmNode, String s) {
@@ -46,6 +48,27 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
         return ret.toString();
     }
+
+    private String dealWithReturn(JmmNode jmmNode, String s){
+
+        StringBuilder ret = new StringBuilder(s != null ? s : "");
+
+        for (JmmNode child : jmmNode.getChildren()){
+
+            if (Objects.equals(child.getKind(), "MethodCalls")){
+                ret.append(this.dealWithMethodCalls(child, s));
+            }
+            else{
+                ret.append(s).append(child.get("value")).append(";");
+            }
+        }
+
+        s += ret;
+
+        return s;
+
+    }
+
 
     private String dealWithImports(JmmNode jmmNode, String s) {
         s = s != null ? s : "";
@@ -145,6 +168,10 @@ public class TableVisitor extends AJmmVisitor<String, String> {
 
         for (JmmNode child : jmmNode.getChildren()) {
             switch (child.getKind()) {
+                case "MethodCalls":
+                    ret.append(this.dealWithMethodCalls(child, s));
+                    break;
+
                 case "Modifier":
                     ret.append(child.get("value")).append(" ");
                     break;
@@ -171,6 +198,7 @@ public class TableVisitor extends AJmmVisitor<String, String> {
                     ret.append(") {");
                     ret.append(visit(child, "\n\t\t"));
                     ret.append(s).append("}");
+
                     break;
                 default:
                     break;
@@ -182,12 +210,30 @@ public class TableVisitor extends AJmmVisitor<String, String> {
         return ret.toString();
     }
 
+    public String dealWithMethodCalls(JmmNode jmmNode, String s){
+
+        String ret = "";
+
+        for (JmmNode child : jmmNode.getChildren()){
+
+            if (Objects.equals(child.getKind(), "Self")){
+                ret = jmmNode.getJmmChild(0).get("value");
+            }
+
+        }
+
+        s += ret;
+
+        return s;
+    }
+
+
     private String dealWithMethodBody(JmmNode jmmNode, String s) {
         StringBuilder ret = new StringBuilder();
         List<Symbol> localVars = new ArrayList<>();
 
         for (JmmNode child : jmmNode.getChildren()) {
-            if(Objects.equals(child.getKind(), "Return")) ret.append(s).append("return ").append(child.getJmmChild(0).get("value")).append(";");
+            if(Objects.equals(child.getKind(), "Return")) ret.append(this.dealWithReturn(child, s));
             if(!Objects.equals(child.getKind(), "Declaration")) continue;
 
             if (Objects.equals(child.getJmmChild(0).getKind(), "Type")){
