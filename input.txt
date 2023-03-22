@@ -1,12 +1,6 @@
-import package;
-
-class LocalVars{
-
-	public int all(){
-	    int b = 1;
-	    String s = "Hello";
-	    char c = 'c';
-	    String[] s = new String[] {"Hello", "World"};
-		return 0;
+import ioPlus;
+class HelloWorld {
+	public static void main(String[] args) {
+		ioPlus.printHelloWorld();
 	}
 }
