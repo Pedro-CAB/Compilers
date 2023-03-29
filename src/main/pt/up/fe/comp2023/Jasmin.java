@@ -31,7 +31,26 @@ public class Jasmin implements JasminBackend {
 
         // Add fields
         for(Field field : classUnit.getFields()){
-            jasminCode.append("\n.field");
+            jasminCode.append("\n.field ");
+            switch (field.getFieldAccessModifier()){
+                case PUBLIC -> jasminCode.append("public ");
+                case PRIVATE -> jasminCode.append("private ");
+                case PROTECTED -> jasminCode.append("protected ");
+            }
+            if(field.isStaticField()) jasminCode.append("static ");
+            if(field.isFinalField()) jasminCode.append("final ");
+            jasminCode.append(field.getFieldName());
+            switch (field.getFieldType().getTypeOfElement()){
+                case INT32 -> jasminCode.append(" I");
+                case BOOLEAN -> jasminCode.append(" Z");
+                case ARRAYREF -> jasminCode.append(" [X");
+                case OBJECTREF -> jasminCode.append(" LY");
+                case CLASS -> jasminCode.append(" CL");
+                case THIS -> jasminCode.append(" A");
+                case STRING -> jasminCode.append(" [C");
+                case VOID -> jasminCode.append(" V");
+            }
+            if(field.isInitialized()) jasminCode.append(" = ").append(field.getInitialValue());
         }
 
 
