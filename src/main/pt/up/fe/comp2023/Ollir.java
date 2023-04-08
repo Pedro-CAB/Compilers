@@ -10,11 +10,11 @@ public class Ollir implements JmmOptimization {
 
         String config = "";
 
-        OllirResult ollirResult = new OllirResult(var1, config, var1.getReports());
+        OllirVisitor ollirVisitor = new OllirVisitor(config, var1.getSymbolTable());
 
-        OllirVisitor ollirVisitor = new OllirVisitor(ollirResult);
+        OllirResult ollirResult = new OllirResult(var1, ollirVisitor.getOllirCode(), var1.getReports());
 
-        return ollirVisitor.getOllir_code();
+        return ollirResult;
     }
 
 }
