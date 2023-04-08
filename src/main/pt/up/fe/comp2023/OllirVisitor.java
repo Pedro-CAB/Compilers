@@ -91,8 +91,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
 
             if (type.equals(".i32 "))
-
-                ollirCode += type + " :=" + type + "0.132\n";
+                ollirCode += type + " :=" + type + "0.132;\n";
             else
                 ollirCode += type + " :=" + type + "0.bool;\n";
         }
