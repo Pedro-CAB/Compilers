@@ -6,6 +6,7 @@ import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 
+import java.util.List;
 import java.util.Objects;
 
 public class OllirVisitor extends AJmmVisitor<String, String> {
@@ -58,19 +59,54 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
+    //Method Structure
     private String dealWithMethod(JmmNode jmmNode, String s){
 
         for (String method: symbolTable.getMethods()){
-            ollirCode += ".method public " + method;
+            ollirCode += ".method public " + method + "(";
 
-            //TODO Parâmetros do método
+            List<Symbol> parameters = symbolTable.getParameters(method);
+
+            int param_sz = parameters.size();
+
+            for (Symbol param : parameters){
+                ollirCode += param.getName();
+
+                if (param_sz == 1){
+                    switch (param.getType().toString()){
+
+                        case "Int" -> ollirCode += ".i32";
+                        case "Bool" -> ollirCode += ".bool";
+                        default -> {
+                        }
+                    }
+                }
+
+                else if (param_sz > 1){
+                    switch (param.getType().toString()){
+
+                        case "Int" -> ollirCode += ".i32, ";
+                        case "Bool" -> ollirCode += ".bool, ";
+                        default -> {
+                        }
+                    }
+                }
+
+                param_sz -= 1;
+            }
 
             switch (symbolTable.getReturnType(method).getName()){
-                case "Int" -> ollirCode += ".i32;\n";
-                case "Bool" -> ollirCode += ".bool;\n";
+                case "Int" -> ollirCode += ").i32{\n";
+                case "Bool" -> ollirCode += ").bool{\n";
                 default -> {
                 }
             }
+
+            for (JmmNode child: jmmNode.getChildren()){
+                //TODO DEAL WITH METHOD BODY
+            }
+
+            ollirCode+= "}\n";
 
         }
 
