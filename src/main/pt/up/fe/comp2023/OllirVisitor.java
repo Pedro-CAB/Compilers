@@ -15,6 +15,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     SymbolTable symbolTable;
 
+    int tempIndex;
+
     public OllirVisitor(String ollirCode, SymbolTable symbolTable) {
         this.ollirCode = ollirCode;
         this.symbolTable = symbolTable;
@@ -137,6 +139,12 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     private String dealWithBinaryOp(JmmNode jmmNode, String s){
 
+        List<Symbol> local_vars= symbolTable.getLocalVariables(jmmNode.get("name"));
+
+        for (int i = 0; i < local_vars.size()- 2; i++){
+            ollirCode+= local_vars.get(i).getName() + ".i32 +.i32 " + local_vars.get(i+1);
+            tempIndex+=1;
+        }
         //TODO
 
         return "";

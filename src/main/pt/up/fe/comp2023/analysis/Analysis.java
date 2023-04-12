@@ -1,10 +1,10 @@
-package pt.up.fe.comp2023.Analysis;
+package pt.up.fe.comp2023.analysis;
 
 import pt.up.fe.comp.jmm.analysis.JmmAnalysis;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
-import pt.up.fe.comp2023.SymbolTable.Table;
-import pt.up.fe.comp2023.SymbolTable.TableVisitor;
+import pt.up.fe.comp2023.symbol.table.Table;
+import pt.up.fe.comp2023.symbol.table.TableVisitor;
 
 
 public class Analysis implements JmmAnalysis {
