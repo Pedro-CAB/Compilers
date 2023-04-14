@@ -62,6 +62,20 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return ollir.toString();
     }
 
+    public static String getType(String type) {
+        StringBuilder ollir = new StringBuilder();
+
+        switch (type) {
+            case "array" -> ollir.append(".array");
+            case "int" -> ollir.append(".i32");
+            case "bool" -> ollir.append(".bool");
+            case "void" -> ollir.append(".V");
+            default -> ollir.append(".").append(type);
+        }
+
+        return ollir.toString();
+    }
+
 
     public String getParamType(String val_param, String method){
 
@@ -72,6 +86,26 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         return "";
     }
+
+    public String getOpType(String op){
+        if(op.equals("&") || op.equals("|") || op.equals("^")
+                || op.equals("&&") || op.equals("||") ||
+                op.equals("<") || op.equals("<=")  || op.equals(">")
+                || op.equals(">=")
+        ){
+            return op + ".bool ";
+        }
+
+        else if (op.equals("+")  || op.equals("-") || op.equals("*") ||
+                op.equals("/") || op.equals("%")){
+            return op + ".i32 ";
+        }
+
+        else
+            return "";
+
+    }
+
 
 
     private String dealWithConstructor(JmmNode jmmNode, String s){
@@ -149,7 +183,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             ollirCode += local_var.getName();
             String type = "";
 
-
             type = getType(local_var.getType());
 
             if (type.equals(".i32"))
@@ -175,16 +208,17 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
-
     private String dealWithBinaryOp(JmmNode jmmNode, String s){
 
-        List<Symbol> local_vars= symbolTable.getLocalVariables(jmmNode.get("name"));
+        for (JmmNode child : jmmNode.getChildren()){
+            if (Objects.equals(child.getKind(), "value")){
+                ollirCode += child.get("value") + getType(child.get("type"));
+            }
 
-        for (int i = 0; i < local_vars.size()- 2; i++){
-            ollirCode += local_vars.get(i).getName() + ".i32 +.i32 " + local_vars.get(i+1);
-            tempIndex+=1;
+            if (Objects.equals(child.getKind(), "op")){
+                ollirCode += getOpType(child.get("op"));
+            }
         }
-        //TODO
 
         return "";
     }
