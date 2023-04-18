@@ -1,20 +1,19 @@
 package pt.up.fe.comp2023.ollir;
 
-import org.antlr.v4.runtime.misc.ObjectEqualityComparator;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
-import pt.up.fe.comp.jmm.ollir.OllirResult;
 
 import java.util.List;
 import java.util.Objects;
 
+/*
 enum Actions {
     Storetemp,
     ReturnValue
-}
+}*/
 
 
 public class OllirVisitor extends AJmmVisitor<String, String> {
@@ -23,12 +22,15 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     SymbolTable symbolTable;
 
-    int tempIndex;
-
     public OllirVisitor(String ollirCode, SymbolTable symbolTable) {
         this.ollirCode = ollirCode;
         this.symbolTable = symbolTable;
     }
+    int importIndex = 0;
+
+    int fieldIndex = 0;
+
+//    int tempIndex;
 
     public String getOllirCode() {
         return ollirCode;
@@ -36,30 +38,32 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     @Override
     protected void buildVisitor() {
-        addVisit("Constructor", this::dealWithConstructor);
-        addVisit("Class Fields", this::dealWithClassFields);
+        addVisit("Program", this::dealWithProgram);
+        addVisit("ImportPackage", this::dealWithImport);
+        addVisit("ClassDeclaration", this::dealWithClassDeclaration);
+        addVisit("ClassBody", this::dealWithClassBody);
+        addVisit("ClassField", this::dealWithClassFields);
         addVisit("Method", this::dealWithMethod);
         addVisit("Assignment", this::dealWithAssignments);
         addVisit("BinaryOp", this::dealWithBinaryOp);
         addVisit("Method Invocation", this::dealWithMethodInvocation);
     }
 
-    public static String getType(Type type) {
-        StringBuilder ollir = new StringBuilder();
+    public String getType(Type type) {
 
-        if (type.isArray()) ollir.append(".array");
+        if (type.isArray()) ollirCode += ".array";
 
         if ("int".equals(type.getName())) {
-            ollir.append(".i32");
+            ollirCode += ".i32";
         } else if ("boolean".equals(type.getName())) {
-            ollir.append(".bool");
+            ollirCode += ".bool";
         } else if ("void".equals(type.getName())) {
-            ollir.append(".V");
+            ollirCode += ".V";
         } else {
-            ollir.append(".").append(type.getName());
+            ollirCode += "." + type.getName();
         }
 
-        return ollir.toString();
+        return "";
     }
 
     public static String getType(String type) {
@@ -103,30 +107,58 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         else
             return "";
-
     }
 
+    private String dealWithProgram(JmmNode jmmNode, String s){
 
-
-    private String dealWithConstructor(JmmNode jmmNode, String s){
-
-        ollirCode += ".construct " + symbolTable.getClassName() + ".V {\n";
-
-        ollirCode += "invokespecial(this, \"<init>\").V;\n}\n";
+        for (JmmNode child : jmmNode.getChildren()) {
+            s += visit(child, "");
+        }
 
         return "";
     }
 
+
+    private String dealWithImport(JmmNode jmmNode, String s){
+
+        ollirCode += symbolTable.getImports().get(importIndex);
+
+        importIndex ++;
+        return "";
+
+    }
+
+    private String dealWithClassDeclaration(JmmNode jmmNode, String s){
+
+        ollirCode += ".construct " + symbolTable.getClassName() + ".V {\n";
+
+        ollirCode += "\tinvokespecial(this, \"<init>\").V;\n}\n";
+
+        return "";
+    }
+
+    private String dealWithClassBody(JmmNode jmmNode, String s) {
+        StringBuilder ret = new StringBuilder(s != null ? s : "");
+        for (JmmNode child : jmmNode.getChildren()) {
+            ret.append(visit(child, "\n\t"));
+        }
+        s = ret.toString();
+
+        return s;
+    }
+
+
     private String dealWithClassFields(JmmNode jmmNode, String s){
 
-        for (Symbol field : symbolTable.getFields()){
-            ollirCode += ".field private " + field.getName();
+        Symbol field = symbolTable.getFields().get(fieldIndex);
 
-            String type = getType(field.getType());
+        ollirCode += ".field private " + field.getName();
 
-            ollirCode += type + ";\n";
+        String type = getType(field.getType());
 
-        }
+        ollirCode += type + ";\n";
+
+        fieldIndex++;
 
         return "";
     }
@@ -141,24 +173,30 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
             int param_sz = parameters.size();
 
-            for (Symbol param : parameters){
-                ollirCode += param.getName();
-                String type = getType(param.getType());
-
-                if (param_sz == 1){
-                    ollirCode += type + ")"+ type + "{\n";
-
-                }
-                else if (param_sz > 1){
-                    ollirCode += type + ", ";
-                }
-
-                param_sz -= 1;
+            if (param_sz == 0){
+                ollirCode += ")";
             }
+            else {
+                for (Symbol param : parameters){
+                    ollirCode += param.getName();
+                    String type = getType(param.getType());
+
+                    if (param_sz == 1){
+                        ollirCode += type + ")";
+
+                    }
+                    else if (param_sz > 1){
+                        ollirCode += type + ", ";
+                    }
+
+                    param_sz -= 1;
+                }
+            }
+
 
             String method_type = getType(symbolTable.getReturnType(method));
 
-            ollirCode += ")"+ method_type+ "{\n";
+            ollirCode += method_type+ "{\n";
 
             for (JmmNode child: jmmNode.getChildren()){
                 if (Objects.equals(child.getKind(), "Assignment"))
