@@ -168,45 +168,46 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitAssignment(JmmSemanticsResult result, JmmNode node, List<Symbol> locals){
+    public List<Report> visitAssignment(JmmSemanticsResult result, JmmNode root, List<Symbol> locals){
         List<Report> reports = result.getReports();
         System.out.println("Called visitAssignment \n");
-        String kind = node.getKind();
+        JmmNode child = root.getChildren().get(0);
+        String kind = child.getKind();
         System.out.println("Descendant of Assignement is " + kind);
-            switch (node.getKind()){
+            switch (child.getKind()){
                 case "NewObject":
-                    String varType = getLocalVarType(node.get("var"), locals);
-                    String assignType = node.getChildren().get(0).get("type");
+                    String varType = getLocalVarType(root.get("var"), locals);
+                    String assignType = child.get("type");
                     if (varType == null){
-                        String message = "Variable " + node.get("var") + " does not exist.";
-                        reports.add(createReport(node, message));
+                        String message = "Variable " + root.get("var") + " does not exist.";
+                        reports.add(createReport(root, message));
                     }
                     else if (!Objects.equals(varType, assignType)) {
                         String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
-                        reports.add(createReport(node, message));
+                        reports.add(createReport(root, message));
                     }
                     break;
                 case "Integer":
-                    varType = getLocalVarType(node.get("var"), locals);
+                    varType = getLocalVarType(root.get("var"), locals);
                     assignType = "int";
                     if (!Objects.equals(varType, assignType)) {
                         String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
-                        reports.add(createReport(node, message));
+                        reports.add(createReport(root, message));
                     }
                     break;
                 case "Boolean":
-                    varType = getLocalVarType(node.get("var"), locals);
+                    varType = getLocalVarType(root.get("var"), locals);
                     assignType = "boolean";
                     if (!Objects.equals(varType, assignType)) {
                         String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
-                        reports.add(createReport(node, message));
+                        reports.add(createReport(root, message));
                     }
                     break;
                 case "BinaryOp":
-                    reports.addAll(visitBinaryOp(result,node, locals));
+                    reports.addAll(visitBinaryOp(result,child, locals));
                     break;
                 default:
-                    System.out.println("NODE TYPE NAO CONTABILIZADO EM visitAssignment : " + node.getKind());
+                    System.out.println("NODE TYPE NAO CONTABILIZADO EM visitAssignment : " + child.getKind());
                     break;
             }
         return reports;
