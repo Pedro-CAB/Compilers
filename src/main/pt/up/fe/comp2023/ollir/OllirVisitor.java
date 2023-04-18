@@ -30,6 +30,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     int fieldIndex = 0;
 
+    int methodIndex = 0;
+
 //    int tempIndex;
 
     public String getOllirCode() {
@@ -47,23 +49,26 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         addVisit("Assignment", this::dealWithAssignments);
         addVisit("BinaryOp", this::dealWithBinaryOp);
         addVisit("Method Invocation", this::dealWithMethodInvocation);
+        addVisit("Return", this::dealWithReturn);
     }
 
     public String getType(Type type) {
 
-        if (type.isArray()) ollirCode += ".array";
+        StringBuilder ollir = new StringBuilder();
+
+        if (type.isArray()) ollir.append(".array");
 
         if ("int".equals(type.getName())) {
-            ollirCode += ".i32";
+            ollir.append(".i32");
         } else if ("boolean".equals(type.getName())) {
-            ollirCode += ".bool";
+            ollir.append(".bool");
         } else if ("void".equals(type.getName())) {
-            ollirCode += ".V";
+            ollir.append(".V");
         } else {
-            ollirCode += "." + type.getName();
+            ollir.append(".").append(type.getName());
         }
 
-        return "";
+        return ollir.toString();
     }
 
     public static String getType(String type) {
@@ -115,6 +120,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             s += visit(child, "");
         }
 
+        ollirCode += "}\n";
         return "";
     }
 
@@ -130,9 +136,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     private String dealWithClassDeclaration(JmmNode jmmNode, String s){
 
-        ollirCode += ".construct " + symbolTable.getClassName() + ".V {\n";
+        ollirCode += symbolTable.getClassName() + "{\n";
 
-        ollirCode += "\tinvokespecial(this, \"<init>\").V;\n}\n";
+        ollirCode += "\t.construct " + symbolTable.getClassName() + ".V {\n";
+
+        ollirCode += "\t\tinvokespecial(this, \"<init>\").V;\n\t}\n";
 
         return "";
     }
@@ -152,7 +160,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         Symbol field = symbolTable.getFields().get(fieldIndex);
 
-        ollirCode += ".field private " + field.getName();
+        ollirCode += "\t.field private " + field.getName();
 
         String type = getType(field.getType());
 
@@ -166,54 +174,89 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
     //Method Structure
     private String dealWithMethod(JmmNode jmmNode, String s){
 
-        for (String method: symbolTable.getMethods()){
-            ollirCode += ".method public " + method + "(";
+        String method = symbolTable.getMethods().get(methodIndex);
 
-            List<Symbol> parameters = symbolTable.getParameters(method);
+        ollirCode += "\t.method public " + method + "(";
 
-            int param_sz = parameters.size();
+        List<Symbol> parameters = symbolTable.getParameters(method);
 
-            if (param_sz == 0){
-                ollirCode += ")";
+        int param_sz = parameters.size();
+
+        if (param_sz == 0){
+            ollirCode += ")";
+        }
+        else {
+            for (Symbol param : parameters){
+                ollirCode += param.getName();
+                String type = getType(param.getType());
+
+                if (param_sz == 1){
+                    ollirCode += type + ")";
+
+                }
+                else if (param_sz > 1){
+                    ollirCode += type + ", ";
+                }
+
+                param_sz -= 1;
             }
-            else {
-                for (Symbol param : parameters){
-                    ollirCode += param.getName();
-                    String type = getType(param.getType());
+        }
 
-                    if (param_sz == 1){
-                        ollirCode += type + ")";
 
+        String method_type = getType(symbolTable.getReturnType(method));
+
+        ollirCode += method_type+ "{\n";
+
+
+        for (Symbol local_var : symbolTable.getLocalVariables(method)){
+        ollirCode += "\t\t " + getType(local_var.getType())+ " " + local_var.getName() + ";\n";
+        }
+
+        for (JmmNode child :jmmNode.getChildren()){
+            if (Objects.equals(child.getKind(), "MethodBody")){
+                for (JmmNode c : child.getChildren()){
+                    if (Objects.equals(c.getKind(), "Return")){
+                        dealWithReturn(c, method);
                     }
-                    else if (param_sz > 1){
-                        ollirCode += type + ", ";
-                    }
-
-                    param_sz -= 1;
                 }
             }
+        }
 
+        /*
 
-            String method_type = getType(symbolTable.getReturnType(method));
+        for (JmmNode child: jmmNode.getChildren()){
+            if (Objects.equals(child.getKind(), "Assignment"))
+                dealWithAssignments(child, s);
+            else if (Objects.equals(child.getKind(), "Method Invocation"))
+                dealWithMethodInvocation(child, s);
 
-            ollirCode += method_type+ "{\n";
-
-            for (JmmNode child: jmmNode.getChildren()){
-                if (Objects.equals(child.getKind(), "Assignment"))
-                    dealWithAssignments(child, s);
-                else if (Objects.equals(child.getKind(), "Method Invocation"))
-                    dealWithMethodInvocation(child, s);
-
-                else if (Objects.equals(child.getKind(), "BinaryOp"))
-                    dealWithBinaryOp(child, s);
-            }
-
-            ollirCode+= "}\n";
+            else if (Objects.equals(child.getKind(), "BinaryOp"))
+                dealWithBinaryOp(child, s);
+            else if (Objects.equals(child.getKind(), "Return"))
+                dealWithReturn(child, method);
 
         }
+        */
+
+
+        ollirCode+= "\t}\n";
+
+        methodIndex++;
 
         return "";
     }
+
+    private String dealWithReturn(JmmNode jmmNode, String method){
+
+        Type ret = symbolTable.getReturnType(method);
+
+        JmmNode child = jmmNode.getJmmChild(0);
+
+        ollirCode += "\t\tret" + getType(ret) + " " + child.get("value") + getType(ret) + ";\n";
+
+        return "";
+    }
+
 
     private String dealWithAssignments(JmmNode jmmNode, String s){
 
