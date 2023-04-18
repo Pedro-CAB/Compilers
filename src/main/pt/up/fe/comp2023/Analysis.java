@@ -16,16 +16,16 @@ import java.util.Queue;
 
 
 public class Analysis implements JmmAnalysis {
-    public JmmSemanticsResult addReport(JmmSemanticsResult result, JmmNode node, String message){
-        Report report = createReport(node,message);
-        List<Report> reports = result.getReports();
-        reports.add(report);
-        result = new JmmSemanticsResult((JmmParserResult) result.getRootNode(), result.getSymbolTable(), reports);
-        return result;
+    public JmmSemanticsResult updateResult(JmmParserResult parserResult, TableVisitor visitor, List<Report> reports){
+        List<Report> currentReports = parserResult.getReports();
+        currentReports.addAll(reports);
+        return new JmmSemanticsResult(parserResult, visitor.getTable(), currentReports);
     }
 
     public Report createReport(JmmNode node, String message){
-        return new Report(ReportType.ERROR,Stage.SEMANTIC, Integer.parseInt(node.get("startLine")),Integer.parseInt(node.get("startColumn")),message);
+        Integer startLine = Integer.parseInt(node.get("startLine")), startColumn = Integer.parseInt(node.get("startColumn"));
+        System.out.println("ERROR (Line " + startLine + " : " + message);
+        return new Report(ReportType.ERROR,Stage.SEMANTIC, startLine,startColumn,message);
     }
 
     public String getLocalVarType(String varName, List<Symbol> locals){
@@ -36,6 +36,7 @@ public class Analysis implements JmmAnalysis {
     }
     //TO BE IMPLEMENTED (NOT FINISHED)!
     public String getTypeOfBinaryOp(JmmNode node, List<Symbol> locals){
+        System.out.println("Called getTypeOfBinaryOp");
         JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
         String firstType, secondType;
         firstType = switch (first.getKind()) {
@@ -77,7 +78,9 @@ public class Analysis implements JmmAnalysis {
         }
     }
     //TO BE IMPLEMENTED (NOT FINISHED)!
-    public JmmSemanticsResult visitBinaryOp(JmmSemanticsResult result, JmmNode node, List<Symbol> locals){
+    public List<Report> visitBinaryOp(JmmSemanticsResult result, JmmNode node, List<Symbol> locals){
+        List<Report> reports = result.getReports();
+        System.out.println("Called visitBinaryOp");
         String operator = node.get("op");
         JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
         String firstType,secondType;
@@ -87,9 +90,12 @@ public class Analysis implements JmmAnalysis {
             case "Integer" -> firstType = "integer";
             case "BinaryOp" -> {
                 firstType = getTypeOfBinaryOp(first, locals);
-                result = visitBinaryOp(result, first, locals);
+                reports.addAll(visitBinaryOp(result, first, locals));
             }
-            default -> firstType = "invalid_type";
+            default -> {
+                firstType = "invalid_type";
+                System.out.println("NODE TYPE NAO CONTABILIZADO EM visitBinaryOp : " + node.getKind());
+            }
         }
         switch (second.getKind()) {
             case "Identifier" -> secondType = getLocalVarType(second.get("value"), locals);
@@ -97,10 +103,14 @@ public class Analysis implements JmmAnalysis {
             case "Integer" -> secondType = "integer";
             case "BinaryOp" -> {
                 secondType = getTypeOfBinaryOp(first, locals);
-                result = visitBinaryOp(result, first, locals);
+                reports.addAll(visitBinaryOp(result, first, locals));
             }
-            default -> secondType = "invalid_type";
+            default -> {
+                secondType = "invalid_type";
+                System.out.println("NODE TYPE NAO CONTABILIZADO EM visitBinaryOp : " + node.getKind());
+            }
         }
+        System.out.println("Evaluating " + firstType + " " + operator + " " + secondType);
         switch(operator){
             //Comparators
             case ">":
@@ -115,8 +125,9 @@ public class Analysis implements JmmAnalysis {
             case "*":
             case "/":
             case "%":
+                System.out.println(firstType + " " + node.get("op") + " " + secondType);
                 if (!Objects.equals(firstType, "integer") || !Objects.equals(secondType, "integer")) {
-                    result = addReport(result, node, "Cannot use '" + operator + "' to compare between '" + firstType + "' and '" + secondType + "'.");
+                    reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'."));
                 }
                 break;
             //Incrementation
@@ -127,13 +138,13 @@ public class Analysis implements JmmAnalysis {
             case "%=":
                 if (!Objects.equals(firstType, "invalid")) {
                         if (!Objects.equals(first.getKind(), "Identifier")) {
-                            result = addReport(result, first, "Expected a variable, found '" + first.get("value"));
+                            reports.add(createReport(first, "Expected a variable, found '" + first.get("value")));
                         } else if (!Objects.equals(firstType, secondType)) {
-                            result = addReport(result, first, "Incompatible types. Cannot use '" + operator + "' with '" + firstType + "' and '" + secondType + "'.");
+                            reports.add(createReport(first, "Incompatible types. Cannot use '" + operator + "' with '" + firstType + "' and '" + secondType + "'."));
                         }
                         if (!Objects.equals(secondType, "invalid")) {
                             if (!Objects.equals(secondType, "integer")) {
-                                result = addReport(result, second, "Trying to increment '" + firstType + "' to '" + secondType + "'.");
+                                reports.add(createReport(second,"Trying to increment '" + firstType + "' to '" + secondType + "'."));
                             }
                         }
                 }
@@ -142,85 +153,116 @@ public class Analysis implements JmmAnalysis {
             case "&&":
             case "||":
                 if(!Objects.equals(firstType, "boolean") || !Objects.equals(secondType, "boolean")){
-                    result = addReport(result,node,"Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'boolean'.");
+                    reports.add(createReport(node,"Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'boolean'."));
                 }
             //Bitwise Operators
             case "&":
             case "|":
             case "^":
                 if(firstType != "integer" || secondType != "integer"){
-                    result = addReport(result,node,"Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'int'.");
+                    reports.add(createReport(node,"Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'int'."));
                 }
+            default:
+                System.out.println("OP TYPE NAO CONTABILIZADO EM visitBinaryOP : " + node.get("op"));
         }
-        return result;
+        return reports;
     }
 
-    public JmmSemanticsResult visitAssignment(JmmSemanticsResult result, JmmNode node, List<Symbol> locals){
+    public List<Report> visitAssignment(JmmSemanticsResult result, JmmNode node, List<Symbol> locals){
+        List<Report> reports = result.getReports();
+        System.out.println("Called visitAssignment \n");
         String kind = node.getKind();
-        if (Objects.equals(kind, "NewObject")){
-            String varType = getLocalVarType(node.get("var"), locals);
-            String assignType = node.getChildren().get(0).get("type");
-            if (varType == null){
-                String message = "Variable " + node.get("var") + " does not exist.";
-                List<Report> reports = result.getReports();
-                reports.add(createReport(node, message));
-                result = new JmmSemanticsResult((JmmParserResult) result.getRootNode(), result.getSymbolTable(), reports);
+        System.out.println("Descendant of Assignement is " + kind);
+            switch (node.getKind()){
+                case "NewObject":
+                    String varType = getLocalVarType(node.get("var"), locals);
+                    String assignType = node.getChildren().get(0).get("type");
+                    if (varType == null){
+                        String message = "Variable " + node.get("var") + " does not exist.";
+                        reports.add(createReport(node, message));
+                    }
+                    else if (!Objects.equals(varType, assignType)) {
+                        String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
+                        reports.add(createReport(node, message));
+                    }
+                    break;
+                case "Integer":
+                    varType = getLocalVarType(node.get("var"), locals);
+                    assignType = "int";
+                    if (!Objects.equals(varType, assignType)) {
+                        String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
+                        reports.add(createReport(node, message));
+                    }
+                    break;
+                case "Boolean":
+                    varType = getLocalVarType(node.get("var"), locals);
+                    assignType = "boolean";
+                    if (!Objects.equals(varType, assignType)) {
+                        String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
+                        reports.add(createReport(node, message));
+                    }
+                    break;
+                case "BinaryOp":
+                    reports.addAll(visitBinaryOp(result,node, locals));
+                    break;
+                default:
+                    System.out.println("NODE TYPE NAO CONTABILIZADO EM visitAssignment : " + node.getKind());
+                    break;
             }
-            else if (!Objects.equals(varType, assignType)) {
-                String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
-                List<Report> reports = result.getReports();
-                reports.add(createReport(node, message));
-                result = new JmmSemanticsResult((JmmParserResult) result.getRootNode(), result.getSymbolTable(), reports);
-            }
-            return result;
-        }
-        else if (Objects.equals(kind,"Integer")){
-            String varType = getLocalVarType(node.get("var"), locals);
-            String assignType = "int";
-            if (!Objects.equals(varType, assignType)) {
-                String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
-                List<Report> reports = result.getReports();
-                reports.add(createReport(node, message));
-                result = new JmmSemanticsResult((JmmParserResult) result.getRootNode(), result.getSymbolTable(), reports);
-            }
-            return result;
-        }
-        else if (Objects.equals(kind,"Boolean")){
-            String varType = getLocalVarType(node.get("var"), locals);
-            String assignType = "boolean";
-            if (!Objects.equals(varType, assignType)) {
-                String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
-                List<Report> reports = result.getReports();
-                reports.add(createReport(node, message));
-                result = new JmmSemanticsResult((JmmParserResult) result.getRootNode(), result.getSymbolTable(), reports);
-            }
-            return result;
-        }
-        else if (Objects.equals(kind, "BinaryOp")){
-            result = visitBinaryOp(result,node, locals);
-            return result;
-        }
-        return result;
+        return reports;
     }
 
-    public JmmSemanticsResult visitMethod(JmmSemanticsResult result, JmmNode root, Table table){
+    public List<Report> visitMethod(JmmSemanticsResult result, JmmNode root, Table table){
+        List<Report> reports = result.getReports();
+        System.out.println("Called visitMethod \n");
         Queue<JmmNode> queue = new LinkedList<>();
-        queue.add(root);
-        String name = root.get("value");
+        queue.addAll(root.getChildren());
+        String name = root.get("name"), returnType;
+        Boolean isPrivate = Boolean.FALSE, isStatic = Boolean.FALSE;
         List<Symbol> parameters = table.getParameters(name);
         List<Symbol> localVariables = table.getLocalVariables(name);
-        String type = table.getReturnType(name).toString();
+        //String type = table.getReturnType(name).toString();
         while (queue.size() > 0){
-            for (JmmNode node : queue.remove().getChildren()){
+                JmmNode node = queue.remove();
+                System.out.println("Visiting Node " + node.getKind());
                 String kind = node.getKind();
-                if (!(Objects.equals(kind, "Modifier") || Objects.equals(kind, "Type") || Objects.equals(kind, "Argument") || Objects.equals(kind, "Declaration"))) {
-                    if (Objects.equals(kind, "Assignment")) {
-                        result = visitAssignment(result, root, localVariables);
+                switch(kind){
+                    case "Argument":
+                        //Por agora não é necessário explorar os argumentos
+                        break;
+                    case "Assignment":
+                        visitAssignment(result,node,localVariables);
+                        break;
+                    case "Declaration":
+                        //AAA
+                        break;
+                    case "MethodBody":
+                        for (JmmNode child : node.getChildren()) queue.add(child);
+                        break;
+                    case "Modifier":
+                        switch(node.get("value")){
+                            case "private":
+                                isPrivate = Boolean.TRUE;
+                                break;
+                            case "static":
+                                isStatic = Boolean.TRUE;
+                                break;
+                            default:
+                                break;
+                        }
+                        break;
+                    case "Type":
+                        returnType = node.get("type");
+                        break;
+                    case "Return":
+                        reports.addAll(visitAssignment(result, root, localVariables));
+                        break;
+                    default:
+                        System.out.println("NODE TYPE NAO CONTABILIZADO EM visitMethod : " + node.getKind());
+                        break;
                     }
-                }
-            }
         }
-        return result;
+        return reports;
     }
 
     public JmmSemanticsResult semanticAnalysis(JmmParserResult parserResult){
@@ -228,34 +270,35 @@ public class Analysis implements JmmAnalysis {
         Table table = new Table();
 
         TableVisitor visitor = new TableVisitor(table);
-        //System.out.println(visitor.visit(parserResult.getRootNode(), ""));
+        System.out.println("Called semanticAnalysis");
 
         //New Code Below:
         JmmSemanticsResult res = new JmmSemanticsResult(parserResult, visitor.getTable(), parserResult.getReports());
         JmmNode root = parserResult.getRootNode();
         Queue<JmmNode> queue = new LinkedList<>();
         queue.add(root);
-        System.out.println("Atts:\n");
-        System.out.println(root.getChildren().get(0).getChildren().get(0).get("value"));
+        List<Report> reports = parserResult.getReports();
         while (queue.size() > 0){
-            for(JmmNode node : queue.remove().getChildren()){
+                JmmNode node = queue.remove();
+                System.out.println("Visiting Node " + node.getKind());
                 //Se for um dos abaixo, explorar os nós abaixo deles
-                if (Objects.equals(node.getKind(), "Program")
-                        || Objects.equals(node.getKind(), "ClassDeclaration")
-                        || Objects.equals(node.getKind(), "ClassName")
-                        || Objects.equals(node.getKind(), "ClassBody")){
-                    queue.add(node);
+                switch(node.getKind()){
+                    case "Program":
+                    case "ClassDeclaration":
+                    case "ClassName":
+                    case "ClassBody":
+                        queue.addAll(node.getChildren());
+                        break;
+                    case "ClassMethod":
+                    case "Return":
+                        reports.addAll(visitMethod(res, node, table));
+                        break;
+                    default:
+                        System.out.println("NODE TYPE NAO CONTABILIZADO EM semanticAnalysis : " + node.getKind());
+                        break;
                 }
                 //Se for um dos abaixo, ignorar
-                if (!Objects.equals(node.getKind(), "Modifier")) {
-                    //Verificações Semânticas feitas a partir deste ponto
-                    if (Objects.equals(node.getKind(), "ClassMethod")) {
-                        res = visitMethod(res, node, table);
-                    }
-                }
-            }
         }
-
         return res;
     }
 }
