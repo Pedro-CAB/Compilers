@@ -56,7 +56,7 @@ public class Launcher {
 
         OllirResult ollirResult = new Ollir().toOllir(result);
 
-        System.out.println("ollirResult: " + ollirResult.toString());
+        System.out.println("ollirResult: " + ollirResult.getOllirCode());
     }
 
     private static Map<String, String> parseArgs(String[] args) {

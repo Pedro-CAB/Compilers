@@ -6,6 +6,7 @@ import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 
+import javax.sql.rowset.serial.SerialStruct;
 import java.util.List;
 import java.util.Objects;
 
@@ -28,7 +29,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
     }
     int importIndex = 0;
 
-    int fieldIndex = 0;
+    int localIndex = 0;
 
     int methodIndex = 0;
 
@@ -136,9 +137,24 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     private String dealWithClassDeclaration(JmmNode jmmNode, String s){
 
-        ollirCode += symbolTable.getClassName() + "{\n";
+        String sup = symbolTable.getSuper();
 
-        ollirCode += "\t.construct " + symbolTable.getClassName() + ".V {\n";
+        if (Objects.equals(sup, "")){
+            ollirCode += symbolTable.getClassName() + "{\n";
+        }
+        else{
+            ollirCode += symbolTable.getClassName() + " extends " + sup + "{\n";
+        }
+
+        for (Symbol field : symbolTable.getFields()){
+            ollirCode += "\t.field private " + field.getName();
+
+            String type = getType(field.getType());
+
+            ollirCode += type + ";\n";
+        }
+
+        ollirCode += "\t.construct " + symbolTable.getClassName() + "()" + ".V {\n";
 
         ollirCode += "\t\tinvokespecial(this, \"<init>\").V;\n\t}\n";
 
@@ -157,7 +173,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
 
     private String dealWithClassFields(JmmNode jmmNode, String s){
-
+        /*
         Symbol field = symbolTable.getFields().get(fieldIndex);
 
         ollirCode += "\t.field private " + field.getName();
@@ -167,7 +183,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         ollirCode += type + ";\n";
 
         fieldIndex++;
-
+        */
         return "";
     }
 
@@ -207,26 +223,19 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         ollirCode += method_type+ "{\n";
 
-
-        for (Symbol local_var : symbolTable.getLocalVariables(method)){
-        ollirCode += "\t\t " + getType(local_var.getType())+ " " + local_var.getName() + ";\n";
-        }
-
         for (JmmNode child :jmmNode.getChildren()){
             if (Objects.equals(child.getKind(), "MethodBody")){
                 for (JmmNode c : child.getChildren()){
                     if (Objects.equals(c.getKind(), "Return")){
                         dealWithReturn(c, method);
                     }
-                    else if (Objects.equals(child.getKind(), "Assignment"))
-                        dealWithAssignments(child, s);
-                    else if (Objects.equals(child.getKind(), "Method Invocation"))
-                        dealWithMethodInvocation(child, s);
+                    else if (Objects.equals(c.getKind(), "Assignment"))
+                        dealWithAssignments(c, method);
+                    else if (Objects.equals(c.getKind(), "Method Invocation"))
+                        dealWithMethodInvocation(c, s);
 
-                    else if (Objects.equals(child.getKind(), "BinaryOp"))
-                        dealWithBinaryOp(child, s);
-                    else if (Objects.equals(child.getKind(), "Return"))
-                        dealWithReturn(child, method);
+                    else if (Objects.equals(c.getKind(), "BinaryOp"))
+                        dealWithBinaryOp(c, s);
                 }
             }
         }
@@ -252,19 +261,26 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     private String dealWithAssignments(JmmNode jmmNode, String s){
 
-        for (Symbol local_var : symbolTable.getLocalVariables(jmmNode.get("Name"))){
-            ollirCode += local_var.getName();
-            String type;
+        Symbol local_var = symbolTable.getLocalVariables(s).get(localIndex);
 
-            type = getType(local_var.getType());
+        ollirCode += "\t\t" + local_var.getName();
+        String type;
 
-            if (type.equals(".i32"))
-                ollirCode += type + " :=" + type + "0.132;\n";
-            else if (type.equals(".bool"))
-                ollirCode += type + " :=" + type + "0.bool;\n";
-            else
-                ollirCode += type + " :=" + type + ";\n";
-        }
+        type = getType(local_var.getType());
+
+        if (type.equals(".i32"))
+            ollirCode += type + " :=" + type + " 0.i32;\n";
+        else if (type.equals(".bool"))
+            ollirCode += type + " :=" + type + " 0.bool;\n";
+        else
+            ollirCode += type + " :=" + type + ";\n";
+
+        localIndex++;
+
+        /*
+        if (localIndex == symbolTable.getLocalVariables(s).size()){
+            localIndex = 0;
+        }*/
 
         return "";
     }
