@@ -218,26 +218,18 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                     if (Objects.equals(c.getKind(), "Return")){
                         dealWithReturn(c, method);
                     }
+                    else if (Objects.equals(child.getKind(), "Assignment"))
+                        dealWithAssignments(child, s);
+                    else if (Objects.equals(child.getKind(), "Method Invocation"))
+                        dealWithMethodInvocation(child, s);
+
+                    else if (Objects.equals(child.getKind(), "BinaryOp"))
+                        dealWithBinaryOp(child, s);
+                    else if (Objects.equals(child.getKind(), "Return"))
+                        dealWithReturn(child, method);
                 }
             }
         }
-
-        /*
-
-        for (JmmNode child: jmmNode.getChildren()){
-            if (Objects.equals(child.getKind(), "Assignment"))
-                dealWithAssignments(child, s);
-            else if (Objects.equals(child.getKind(), "Method Invocation"))
-                dealWithMethodInvocation(child, s);
-
-            else if (Objects.equals(child.getKind(), "BinaryOp"))
-                dealWithBinaryOp(child, s);
-            else if (Objects.equals(child.getKind(), "Return"))
-                dealWithReturn(child, method);
-
-        }
-        */
-
 
         ollirCode+= "\t}\n";
 
@@ -262,7 +254,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         for (Symbol local_var : symbolTable.getLocalVariables(jmmNode.get("Name"))){
             ollirCode += local_var.getName();
-            String type = "";
+            String type;
 
             type = getType(local_var.getType());
 
