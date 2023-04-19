@@ -96,7 +96,10 @@ public class Analysis implements JmmAnalysis {
         JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
         String firstType,secondType;
         switch (first.getKind()) {
-            case "Identifier" -> firstType = getLocalVarType(first.get("value"), locals);
+            case "Identifier" -> {
+                firstType = getLocalVarType(first.get("value"), locals);
+                reports.addAll(visitIdentifier(reports, second, locals,firstType));
+            }
             case "Boolean" -> firstType = "boolean";
             case "Integer" -> firstType = "integer";
             case "BinaryOp" -> {
@@ -109,7 +112,10 @@ public class Analysis implements JmmAnalysis {
             }
         }
         switch (second.getKind()) {
-            case "Identifier" -> secondType = getLocalVarType(second.get("value"), locals);
+            case "Identifier" -> {
+                secondType = getLocalVarType(second.get("value"), locals);
+                reports.addAll(visitIdentifier(reports, second, locals,secondType));
+            }
             case "Boolean" -> secondType = "boolean";
             case "Integer" -> secondType = "integer";
             case "BinaryOp" -> {
@@ -197,12 +203,7 @@ public class Analysis implements JmmAnalysis {
             case "Identifier":
                 String varName = child.get("value");
                 String varType = getLocalVarType(varName,locals);
-                if (varType == null){
-                    reports.add(createReport(child,"Variable " + varName + " is not declared within scope."));
-                }
-                else if (!Objects.equals(returnType, varType)){
-                    reports.add(createReport(child,"Method " + methodName + " should return '" + returnType + "' but is returning '" + varType + "'."));
-                }
+                visitIdentifier(reports,child,locals,varType);
                 break;
             case "BinaryOp":
                 String operationType = getTypeOfBinaryOp(child,locals);
@@ -243,7 +244,8 @@ public class Analysis implements JmmAnalysis {
             case "Modifier":
                 System.out.println("???? -> " + child);
             case "NewObject":
-                String assignType = child.getChildren().get(0).get("type") + "_array";
+                String assignType = child.getChildren().get(0).get("type");
+                if (assignType == "int") assignType += "_array";
                 if (varType == null){
                     String message = "Variable " + root.get("var") + " does not exist.";
                     reports.add(createReport(root, message));
@@ -268,6 +270,11 @@ public class Analysis implements JmmAnalysis {
                     reports.add(createReport(root, message));
                 }
                 break;
+            case "Identifier":
+                String varName = child.get("value");
+                varType = getLocalVarType(varName,locals);
+                visitIdentifier(reports,child,locals,varType);
+                break;
             case "BinaryOp":
                 String operationType = getTypeOfBinaryOp(child,locals);
                 if(operationType == "invalid") {
@@ -284,6 +291,17 @@ public class Analysis implements JmmAnalysis {
                 System.out.println("NODE TYPE NAO CONTABILIZADO EM visitAssignment : " + child.getKind());
                 break;
             }
+        return reports;
+    }
+
+    public List<Report> visitIdentifier(List<Report> reports, JmmNode root, List<Symbol> locals, String varType){
+        String assignType = getLocalVarType(root.get("value"),locals);
+        if (assignType == null){
+            reports.add(createReport(root,"Variable " + root.get("value") + " is not declared."));
+        }
+        else if (assignType != varType){
+            reports.add(createReport(root,"Assignment between a '" + varType + "' and a '" + assignType + "'."));
+        }
         return reports;
     }
 
