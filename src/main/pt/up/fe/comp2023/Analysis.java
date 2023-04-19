@@ -173,7 +173,7 @@ public class Analysis implements JmmAnalysis {
         System.out.println("Called visitAssignment \n");
         JmmNode child = root.getChildren().get(0);
         String kind = child.getKind();
-        System.out.println("Descendant of Assignement is " + kind);
+        System.out.println("Descendant of Assignment is " + kind);
             switch (child.getKind()){
                 case "NewObject":
                     String varType = getLocalVarType(root.get("var"), locals);
@@ -271,6 +271,7 @@ public class Analysis implements JmmAnalysis {
         Table table = new Table();
 
         TableVisitor visitor = new TableVisitor(table);
+        visitor.visit(parserResult.getRootNode(),"");
         System.out.println("Called semanticAnalysis");
 
         //New Code Below:
