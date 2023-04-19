@@ -23,7 +23,7 @@ public class Analysis implements JmmAnalysis {
     }
 
     public Report createReport(JmmNode node, String message){
-        Integer startLine = Integer.parseInt(node.get("startLine")), startColumn = Integer.parseInt(node.get("startColumn"));
+        Integer startLine = Integer.parseInt(node.get("lineStart")), startColumn = Integer.parseInt(node.get("colStart"));
         System.out.println("ERROR (Line " + startLine + " : " + message);
         return new Report(ReportType.ERROR,Stage.SEMANTIC, startLine,startColumn,message);
     }
@@ -265,6 +265,33 @@ public class Analysis implements JmmAnalysis {
         }
         return reports;
     }
+    public List<Report> visitProgram(JmmSemanticsResult result, JmmNode node, Table table){
+        Queue<JmmNode> queue = new LinkedList<>();
+        queue.add(node);
+        List<Report> reports = result.getReports();
+        while (queue.size() > 0){
+            node = queue.remove();
+            System.out.println("Visiting Node " + node.getKind());
+            //Se for um dos abaixo, explorar os nós abaixo deles
+            switch(node.getKind()){
+                case "Program":
+                case "ClassDeclaration":
+                case "ClassName":
+                case "ClassBody":
+                    queue.addAll(node.getChildren());
+                    break;
+                case "ClassMethod":
+                case "Return":
+                    reports.addAll(visitMethod(result, node, table));
+                    break;
+                default:
+                    System.out.println("NODE TYPE NAO CONTABILIZADO EM semanticAnalysis : " + node.getKind());
+                    break;
+            }
+            //Se for um dos abaixo, ignorar
+        }
+        return reports;
+    }
 
     public JmmSemanticsResult semanticAnalysis(JmmParserResult parserResult){
 
@@ -277,30 +304,8 @@ public class Analysis implements JmmAnalysis {
         //New Code Below:
         JmmSemanticsResult res = new JmmSemanticsResult(parserResult, visitor.getTable(), parserResult.getReports());
         JmmNode root = parserResult.getRootNode();
-        Queue<JmmNode> queue = new LinkedList<>();
-        queue.add(root);
         List<Report> reports = parserResult.getReports();
-        while (queue.size() > 0){
-                JmmNode node = queue.remove();
-                System.out.println("Visiting Node " + node.getKind());
-                //Se for um dos abaixo, explorar os nós abaixo deles
-                switch(node.getKind()){
-                    case "Program":
-                    case "ClassDeclaration":
-                    case "ClassName":
-                    case "ClassBody":
-                        queue.addAll(node.getChildren());
-                        break;
-                    case "ClassMethod":
-                    case "Return":
-                        reports.addAll(visitMethod(res, node, table));
-                        break;
-                    default:
-                        System.out.println("NODE TYPE NAO CONTABILIZADO EM semanticAnalysis : " + node.getKind());
-                        break;
-                }
-                //Se for um dos abaixo, ignorar
-        }
+        reports.addAll(visitProgram(res,root,table));
         return res;
     }
 }
