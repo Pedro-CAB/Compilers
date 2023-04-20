@@ -32,7 +32,9 @@ public class Analysis implements JmmAnalysis {
         return list;
     }
 
-
+    public Boolean isContainedInImports(String className, List<String> imports){
+        return imports.contains("import " + className + ";\n");
+    }
 
     public String getVarType(String varName, List<Symbol> vars){
         for (Symbol var : vars){
@@ -143,8 +145,11 @@ public class Analysis implements JmmAnalysis {
             case "*":
             case "/":
             case "%":
-                if (!Objects.equals(firstType, "int") || !Objects.equals(secondType, "int")) {
-                    reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'."));
+                //If Type of one of the operands is invalid, the problem is already reported
+                if(!Objects.equals(firstType, "invalid_type") && !Objects.equals(secondType, "invalid_type")) {
+                    if (!Objects.equals(firstType, "int") || !Objects.equals(secondType, "int")) {
+                            reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'."));
+                    }
                 }
                 break;
             //Incrementation
@@ -166,13 +171,13 @@ public class Analysis implements JmmAnalysis {
                         }
                 }
                 break;
-            //Logic Operators
+            //Logic Operators (Can only be used between booleans)
             case "&&":
             case "||":
                 if(!Objects.equals(firstType, "boolean") || !Objects.equals(secondType, "boolean")){
                     reports.add(createReport(node,"Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'boolean'."));
                 }
-            //Bitwise Operators
+            //Bitwise Operators (Can only be used between ints)
             case "&":
             case "|":
             case "^":
@@ -189,6 +194,7 @@ public class Analysis implements JmmAnalysis {
         JmmNode child = root.getChildren().get(0);
         List<Symbol> vars = table.getLocalVariables(methodName);
         vars.addAll(table.getParameters(methodName));
+        vars.addAll(table.getFields());
         String returnType = table.getReturnType(methodName).getName();
         switch(child.getKind()){
             case "Integer":
@@ -228,7 +234,7 @@ public class Analysis implements JmmAnalysis {
         String methodClassName = getVarType(root.getChildren().get(0).get("value"), vars);
         String className = table.getClassName();
         List<String> imports = table.getImports();
-        if(!imports.contains(methodClassName) && !Objects.equals(methodClassName,className)){
+        if(!isContainedInImports(methodClassName,imports) && !Objects.equals(methodClassName,className)){
             reports.add(createReport(root,"Class " + methodClassName + " doesn't exist. Maybe you should have imported it?"));
         }
         return reports;
@@ -239,6 +245,7 @@ public class Analysis implements JmmAnalysis {
         JmmNode child = root.getChildren().get(0);
         List<Symbol> vars = table.getLocalVariables(methodName);
         vars.addAll(table.getParameters(methodName));
+        vars.addAll(table.getFields());
         String varType = getVarType(root.get("var"), vars);
         String kind = child.getKind();
         System.out.println("        visitAssignment :: Descendants of" + root.getKind() + " are " + root.getChildren());
@@ -297,9 +304,8 @@ public class Analysis implements JmmAnalysis {
     }
 
     public List<Report> visitIdentifier(List<Report> reports, JmmNode root, List<Symbol> vars, String varType){
-        System.out.println("IDENTIFIER --> " + root.getKind());
         String assignType = getVarType(root.get("value"),vars);
-        if (assignType == null){
+        if (assignType == null){ //Checks if variable was previously declared
             reports.add(createReport(root,"Variable " + root.get("value") + " is not declared."));
         }
         else if (assignType != varType){
@@ -312,6 +318,7 @@ public class Analysis implements JmmAnalysis {
         String varName = root.get("var");
         List<Symbol> vars = table.getLocalVariables(methodName);
         vars.addAll(table.getParameters(methodName));
+        vars.addAll(table.getFields());
         String className = table.getClassName(), methodClassName = root.getChildren().get(0).get("type");
         if (Objects.equals(methodClassName,className)){
             reports.add(createReport(root,"Creating an object of type '" + className + "' inside the class body."));
@@ -325,6 +332,7 @@ public class Analysis implements JmmAnalysis {
     public List<Report> visitMethodBody(List<Report> reports, JmmNode node, Table table, String methodName){
         List<Symbol> vars = table.getLocalVariables(methodName);
         vars.addAll(table.getParameters(methodName));
+        vars.addAll(table.getFields());
         for(JmmNode child : node.getChildren()){
             switch(child.getKind()) {
                 case "Assignment":

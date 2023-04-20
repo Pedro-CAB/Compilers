@@ -1,19 +1,17 @@
-class IncompatibleReturn {
+import A;
+
+class AssumeArguments {
 
     public static void main(String[] args) {
 
     }
 
-    public int foo(int a) {
-        return a + 1;
-    }
+    public int bar() {
+        A a;
+        boolean b;
 
-    public boolean bar() {
-        IncompatibleReturn a;
-        int b;
-
-        a = new IncompatibleReturn();
-        b = 0;
+        a = new A();
+        b = true;
 
         return a.foo(b);
     }
