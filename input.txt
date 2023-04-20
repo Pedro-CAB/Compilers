@@ -1,6 +1,4 @@
-import io;
-
-class CompileMethodInvocation {
+class CompileArithmetic {
 
     public static void main(String[] args) {
 
@@ -8,11 +6,11 @@ class CompileMethodInvocation {
 
     public int foo() {
         int a;
+        int b;
 
         a = 1;
+        b = 2;
 
-        io.println(a);
-
-        return 0;
+        return a + b;
     }
 }

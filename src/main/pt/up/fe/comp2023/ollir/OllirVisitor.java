@@ -23,7 +23,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     int methodIndex = 0;
 
-//    int tempIndex;
+    int tempIndex = 1;
 
     public String getOllirCode() {
         return ollirCode;
@@ -254,8 +254,21 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         JmmNode child = jmmNode.getJmmChild(0);
 
-        ollirCode += "\t\tret" + getType(ret) + " " + child.get("value") + getType(ret) + ";\n";
+        if (!Objects.equals(child.getKind(), "BinaryOp")){
+            ollirCode += "\t\tret" + getType(ret) + " " + child.get("value") + getType(ret) + ";\n";
+        }
+        else {
 
+            String temp = "t" + tempIndex + getType(ret);
+            String exp = temp + " :=" + getType(ret)+ " ";
+            exp += dealWithBinaryOp(child, method);
+
+            exp += ";\n";
+
+            ollirCode += "\t\t" + exp;
+            ollirCode += "\t\tret" + getType(ret) + " " + temp + ";\n";
+
+        }
         return "";
     }
 
@@ -278,10 +291,9 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         localIndex++;
 
-        /*
         if (localIndex == symbolTable.getLocalVariables(s).size()){
             localIndex = 0;
-        }*/
+        }
 
         return "";
     }
@@ -312,19 +324,28 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
-    private String dealWithBinaryOp(JmmNode jmmNode, String s){
+    private String dealWithBinaryOp(JmmNode jmmNode, String method){
 
-        for (JmmNode child : jmmNode.getChildren()){
-            if (Objects.equals(child.getKind(), "value")){
-                ollirCode += child.get("value") + getType(child.get("type"));
+        String s = "";
+
+        for (int i = 0; i < jmmNode.getNumChildren(); i++){
+            JmmNode child = jmmNode.getJmmChild(i);
+
+            Symbol local = symbolTable.getLocalVariables(method).get(localIndex);
+
+            if (local.getName().equals(child.get("value")) && i == jmmNode.getNumChildren()- 1){
+                s += child.get("value") + getType(local.getType());
+                localIndex++;
+            }
+            else{
+                s += child.get("value") + getType(local.getType()) + " " + getOpType(jmmNode.get("op"));
+                localIndex++;
             }
 
-            if (Objects.equals(child.getKind(), "op")){
-                ollirCode += getOpType(child.get("op"));
-            }
+
         }
-
-        return "";
+        localIndex = 0;
+        return s;
     }
 
 }
