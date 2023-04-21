@@ -6,8 +6,11 @@ import java.util.HashMap;
 import java.util.Map;
 
 import pt.up.fe.comp.TestUtils;
-import pt.up.fe.comp.jmm.analysis.JmmAnalysis;
+import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
+import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
+import pt.up.fe.comp2023.analysis.Analysis;
+import pt.up.fe.comp2023.ollir.Ollir;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
@@ -48,7 +51,12 @@ public class Launcher {
         Analysis analysis = new Analysis();
 
         System.out.println("\n\nPrinting Symbol Table\n");
-        analysis.semanticAnalysis(parserResult);
+
+        JmmSemanticsResult result = new Analysis().semanticAnalysis(parserResult);analysis.semanticAnalysis(parserResult);
+
+        OllirResult ollirResult = new Ollir().toOllir(result);
+
+        System.out.println("ollirResult: " + ollirResult.getOllirCode());
     }
 
     private static Map<String, String> parseArgs(String[] args) {

@@ -94,7 +94,6 @@ expression
     | op=('++' | '--' | '+' | '-' | '!' | '~') expression #UnaryPreOp
     | expression op=('*' | '/' | '%') expression #BinaryOp
     | expression op=('+' | '-') expression #BinaryOp
-    | expression op=('<<' | '>>' | '>>>') expression #BinaryOp
     | expression op=('<' | '<=' | '>' | '>=' | 'instanceof') expression #BinaryOp
     | expression op=('==' | '!=' ) expression #BinaryOp
     | expression op='&' expression #BinaryOp
