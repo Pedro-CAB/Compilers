@@ -48,7 +48,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         StringBuilder ollir = new StringBuilder();
 
-        if (type.isArray()) ollir.append(".array");
+        if (type.isArray()) ollir.append(".array.i32");
 
         if ("int".equals(type.getName())) {
             ollir.append(".i32");
