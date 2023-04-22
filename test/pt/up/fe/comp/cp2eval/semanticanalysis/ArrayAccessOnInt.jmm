@@ -1,13 +1,13 @@
-class CompileAssignment {
+class ArrayAccessOnInt {
 
     public static void main(String[] args) {
 
     }
 
     public int foo() {
-        int[] a;
-        int[] b;
+        int a;
+        a = 0;
 
-        return 0;
+        return a[10];
     }
 }

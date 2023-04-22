@@ -1,4 +1,4 @@
-class CompileAssignment {
+class ArrayInWhileCondition {
 
     public static void main(String[] args) {
 
@@ -6,7 +6,10 @@ class CompileAssignment {
 
     public int foo() {
         int[] a;
-        int[] b;
+        a = new int[2];
+
+        while (a) {
+        }
 
         return 0;
     }

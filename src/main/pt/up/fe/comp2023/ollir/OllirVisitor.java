@@ -5,8 +5,8 @@ import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
-import java.util.List;
-import java.util.Objects;
+
+import java.util.*;
 
 public class OllirVisitor extends AJmmVisitor<String, String> {
 
@@ -48,7 +48,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         StringBuilder ollir = new StringBuilder();
 
-        if (type.isArray()) ollir.append(".array");
+        if (type.isArray()) ollir.append(".array.i32");
 
         if ("int".equals(type.getName())) {
             ollir.append(".i32");
@@ -106,6 +106,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             return "";
     }
 
+    private boolean isInvokeVirtual(String method_name){
+
+        return symbolTable.getMethods().contains(method_name);
+    }
+
     private String dealWithProgram(JmmNode jmmNode, String s){
 
         for (JmmNode child : jmmNode.getChildren()) {
@@ -115,7 +120,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         ollirCode += "}\n";
         return "";
     }
-
 
     private String dealWithImport(JmmNode jmmNode, String s){
 
@@ -172,7 +176,12 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         String method = symbolTable.getMethods().get(methodIndex);
 
-        ollirCode += "\t.method public " + method + "(";
+        if (method.equals("main")){
+            ollirCode += "\t.method public static " + method + "(";
+        }
+        else{
+            ollirCode += "\t.method public " + method + "(";
+        }
 
         List<Symbol> parameters = symbolTable.getParameters(method);
 
@@ -304,23 +313,35 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         JmmNode method_aux = jmmNode.getJmmChild(1);
 
         String method_name = method_aux.get("methodName");
+        String method_arg = "";
 
-        JmmNode temp = method_aux.getJmmChild(0);
-
-        String method_arg = temp.getJmmChild(0).get("value");
-
-        String method_sup = jmmNode.getJmmChild(0).get("value");
+        String method_sup;
 
         String arg_type = "";
+        if (method_aux.getNumChildren() > 0) {
 
-        for (Symbol symbol : symbolTable.getLocalVariables(method)){
-            if (Objects.equals(method_arg, symbol.getName())){
-                arg_type += getType(symbol.getType());
+            JmmNode temp = method_aux.getJmmChild(0);
+            method_arg = temp.getJmmChild(0).get("value");
+
+            method_sup = jmmNode.getJmmChild(0).get("value");
+
+            for (Symbol symbol : symbolTable.getLocalVariables(method)){
+                if (Objects.equals(method_arg, symbol.getName())){
+                    arg_type += getType(symbol.getType());
+                }
+            }
+
+            ollirCode += "\t\tinvokestatic(" + method_sup + ", "+ "\"" + method_name + "\", " +
+                    method_arg + arg_type + ").V;\n";
+        }
+        else{
+            if (isInvokeVirtual(method_arg)){
+                ollirCode += "\t\tinvokevirtual(this, " + "\"" + method_name + "\", " +
+                        method_arg + arg_type + ").V;\n";
+
             }
         }
 
-        ollirCode += "\t\tinvokestatic(" + method_sup + ", "+ "\"" + method_name + "\", " +
-                method_arg + arg_type + ").V;\n";
 
         return "";
     }
