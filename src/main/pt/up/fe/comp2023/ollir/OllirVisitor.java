@@ -267,6 +267,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
             ollirCode += "\t\t" + exp;
             ollirCode += "\t\tret" + getType(ret) + " " + temp + ";\n";
+            tempIndex++;
 
         }
         return "";
