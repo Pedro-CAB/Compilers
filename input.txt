@@ -1,21 +1,12 @@
-import io.println;
-
-class CompileMethodInvocation {
+class CompileAssignment {
 
     public static void main(String[] args) {
 
     }
 
     public int foo() {
-        int a;
-
-        a = 1;
-
-        io.println(a);
-
-        CompileMethodClass b;
-
-        b.foo();
+        int[] a;
+        int[] b;
 
         return 0;
     }
