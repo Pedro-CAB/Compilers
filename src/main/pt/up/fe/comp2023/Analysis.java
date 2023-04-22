@@ -279,7 +279,10 @@ public class Analysis implements JmmAnalysis {
                 reports.add(createReport(root, "Class " + methodClassName + " doesn't exist. Maybe you should have imported it?"));
             }
             String calledMethodName = root.getJmmChild(1).get("methodName");
-            if (Objects.equals(methodClassName, className) && !table.getMethods().contains(calledMethodName)){
+            System.out.println(methodClassName);
+            System.out.println(className);
+            System.out.println();
+            if (Objects.equals(methodClassName, className) && !table.getMethods().contains(calledMethodName) && table.getSuper() == ""){
                 reports.add(createReport(root, "Method " + calledMethodName + " is not declared."));
             }
         }

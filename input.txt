@@ -1,22 +1,18 @@
 import A;
-import B;
 
-class ObjectAssignmentPassImports {
+class CallToMethodAssumedInExtends extends A {
 
     public static void main(String[] args) {
 
     }
 
-    public A foo() {
-        A a;
-        B b;
+    public int foo() {
+        CallToMethodAssumedInExtends a;
+        a = new CallToMethodAssumedInExtends();
 
-        a = new A();
-        b = new B();
+        // Assume bar() is in A
+        a.bar();
 
-        // A and B imported, assume it is correct
-        a = b;
-
-        return a;
+        return 0;
     }
 }
