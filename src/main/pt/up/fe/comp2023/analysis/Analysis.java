@@ -282,7 +282,7 @@ public class Analysis implements JmmAnalysis {
             System.out.println(methodClassName);
             System.out.println(className);
             System.out.println();
-            if (Objects.equals(methodClassName, className) && !table.getMethods().contains(calledMethodName) && table.getSuper() == ""){
+            if (Objects.equals(methodClassName, className) && !table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(), "")){
                 reports.add(createReport(root, "Method " + calledMethodName + " is not declared."));
             }
         }
@@ -292,7 +292,7 @@ public class Analysis implements JmmAnalysis {
     public String getArrayAccessReturn(JmmNode root, List<Symbol> vars) {
         JmmNode arrayChild = root.getJmmChild(0);
         for (Symbol var : vars) {
-            if (var.getName() == arrayChild.get("value")) {
+            if (Objects.equals(var.getName(), arrayChild.get("value"))) {
                 return var.getType().getName();
             }
         }
@@ -312,7 +312,7 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "NewObject":
                 String assignType = child.getChildren().get(0).get("type");
-                if (assignType == "int") assignType += "[]";
+                if (Objects.equals(assignType, "int")) assignType += "[]";
                 if (varType == null) {
                     String message = "Variable " + root.get("var") + " does not exist.";
                     reports.add(createReport(root, message));
@@ -324,7 +324,7 @@ public class Analysis implements JmmAnalysis {
             case "ArrayAcess":
                 String arrayReturnType = getArrayAccessReturn(child, vars);
                 String arrayType = getVarType(child.getJmmChild(0).get("value"), vars);
-                if (arrayReturnType != varType) {
+                if (!Objects.equals(arrayReturnType, varType)) {
                     reports.add(createReport(child, "Assigning variable of type '" + varType + "' to element of array of type '" + arrayType + "'."));
                 }
                 reports.addAll(visitArrayAcess(reports, child, table, methodName));
@@ -349,9 +349,9 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "BinaryOp":
                 String operationType = getTypeOfBinaryOp(child, vars);
-                if (operationType == "invalid") {
+                if (Objects.equals(operationType, "invalid")) {
                     reports.addAll(visitBinaryOp(reports, child, table, vars, methodName));
-                } else if (operationType != varType) {
+                } else if (!Objects.equals(operationType, varType)) {
                     reports.add(createReport(child, "Assignment between a '" + varType + "' and a '" + operationType + "'."));
                 }
                 break;
@@ -419,11 +419,29 @@ public class Analysis implements JmmAnalysis {
                 case "ExprStmt":
                     reports.addAll(visitExprStmt(reports,child,table, methodName));
                     break;
+                case "While":
+                    reports.addAll(visitWhile(reports,child,table,methodName));
+                    break;
                 default:
                     System.out.println("    visitMethodBody :: NODE TYPE NAO CONTABILIZADO " + child.getKind());
                     break;
             }
         }
+        return reports;
+    }
+
+    private Collection<? extends Report> visitWhile(List<Report> reports, JmmNode root, Table table, String methodName) {
+        JmmNode condition = root.getJmmChild(0);
+        List<Symbol> vars = getRelevantVars(methodName,table);
+        switch(condition.getKind()){
+            case "Identifier":
+                String varName = condition.get("value");
+                String varType = getVarType(varName,vars);
+                if(!Objects.equals(varType, "boolean"))
+                    reports.add(createReport(condition,"Condition should be 'boolean'."));
+
+        }
+        reports.addAll(visitMethodBody(reports,root.getJmmChild(1),table,methodName));
         return reports;
     }
 
@@ -445,7 +463,7 @@ public class Analysis implements JmmAnalysis {
             case "Identifier":
                 String accessVarName = indexChild.get("value");
                 String accessVarType = getVarType(accessVarName,vars);
-                if (accessVarType != "int"){
+                if (!Objects.equals(accessVarType, "int")){
                     reports.add(createReport(indexChild,"Array Access Index should be of type 'int'."));
                 }
                 else {
