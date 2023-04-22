@@ -1,4 +1,4 @@
-package pt.up.fe.comp2023;
+package pt.up.fe.comp2023.symbol.table;
 
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.Type;
@@ -58,7 +58,7 @@ public class TableVisitor extends AJmmVisitor<String, String> {
             if (Objects.equals(child.getKind(), "MethodCalls")){
                 ret.append(this.dealWithMethodCalls(child, s));
             }
-            else if (!Objects.equals(child.getKind(), "BinaryOp") && !Objects.equals(child.getKind(), "ArrayAcess")){
+            else if (!Objects.equals(child.getKind(), "BinaryOp") && !Objects.equals(child.getKind(), "ArrayAccess")){
                 ret.append(s).append(child.get("value")).append(";");
             }
         }
