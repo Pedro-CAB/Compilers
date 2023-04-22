@@ -14,33 +14,50 @@ import java.util.*;
 
 public class Analysis implements JmmAnalysis {
 
-    public Report createReport(JmmNode node, String message){
-        Integer startLine = Integer.parseInt(node.get("lineStart")), startColumn = Integer.parseInt(node.get("colStart"));
-        System.out.println("NEW ERROR IN LINE " + startLine + "  ! -> " + message);
-        return new Report(ReportType.ERROR,Stage.SEMANTIC, startLine,startColumn,message);
+    public List<Symbol> getRelevantVars(String methodName, Table table) {
+        List<Symbol> vars = table.getLocalVariables(methodName);
+        vars.addAll(table.getParameters(methodName));
+        vars.addAll(table.getFields());
+        return vars;
     }
 
-    public List<Report> eraseDuplicateReports (List<Report> reports){
+    public Report createReport(JmmNode node, String message) {
+        Integer startLine = Integer.parseInt(node.get("lineStart")), startColumn = Integer.parseInt(node.get("colStart"));
+        System.out.println("NEW ERROR IN LINE " + startLine + "  ! -> " + message);
+        return new Report(ReportType.ERROR, Stage.SEMANTIC, startLine, startColumn, message);
+    }
+
+    public List<Report> eraseDuplicateReports(List<Report> reports) {
         Set<Report> set = new HashSet<Report>();
-        for (Report r : reports){
+        for (Report r : reports) {
             set.add(r);
         }
         List<Report> list = new ArrayList<Report>();
-        for (Report r : set){
+        for (Report r : set) {
             list.add(r);
         }
         return list;
     }
 
-    public Boolean isContainedInImports(String className, List<String> imports){
+    public Boolean isContainedInImports(String className, List<String> imports) {
         return imports.contains("import " + className + ";\n");
     }
 
-    public String getVarType(String varName, List<Symbol> vars){
-        for (Symbol var : vars){
-            if (Objects.equals(var.getName(), varName)){
+    public Boolean isVarArray(String varName, List<Symbol> vars) {
+        for (Symbol var : vars) {
+            if (Objects.equals(var.getName(), varName)) {
                 if (var.getType().isArray())
-                    return var.getType().getName() + "_array";
+                    return true;
+            }
+        }
+        return false;
+    }
+
+    public String getVarType(String varName, List<Symbol> vars) {
+        for (Symbol var : vars) {
+            if (Objects.equals(var.getName(), varName)) {
+                if (var.getType().isArray() && !Objects.equals(var.getType().getName(), "String"))
+                    return var.getType().getName() + "[]";
                 else
                     return var.getType().getName();
             }
@@ -48,7 +65,7 @@ public class Analysis implements JmmAnalysis {
         return null;
     }
 
-    public String getTypeOfBinaryOp(JmmNode node, List<Symbol> vars){
+    public String getTypeOfBinaryOp(JmmNode node, List<Symbol> vars) {
         JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
         String firstType, secondType;
         System.out.println(vars);
@@ -67,7 +84,7 @@ public class Analysis implements JmmAnalysis {
             default -> "invalid_type";
         };
         System.out.println("getTypeOfBynaryOp::Evaluating " + firstType + " " + node.get("op") + " " + secondType);
-        switch(node.get("op")){
+        switch (node.get("op")) {
             case ">":
             case "<":
             case "==":
@@ -79,34 +96,36 @@ public class Analysis implements JmmAnalysis {
             case "*":
             case "/":
             case "%":
-                if(!Objects.equals(firstType, "integer") || !Objects.equals(secondType, "integer")){return "invalid";}
-                else return "integer";
+                if (!Objects.equals(firstType, "integer") || !Objects.equals(secondType, "integer")) {
+                    return "invalid";
+                } else return "integer";
             case "+=":
             case "-=":
             case "*=":
             case "/=":
             case "%=":
-                if(!Objects.equals(first.getKind(), "Identifier") || (!Objects.equals(second.getKind(), "Integer") && !Objects.equals(second.getKind(), "Identifier"))) return "invalid";
+                if (!Objects.equals(first.getKind(), "Identifier") || (!Objects.equals(second.getKind(), "Integer") && !Objects.equals(second.getKind(), "Identifier")))
+                    return "invalid";
             default:
                 return "invalid";
         }
     }
 
-    public List<Report> visitBinaryOp(List<Report> reports, JmmNode node, List<Symbol> vars){
+    public List<Report> visitBinaryOp(List<Report> reports, JmmNode node, Table table, List<Symbol> vars) {
         System.out.println("Called visitBinaryOp");
         String operator = node.get("op");
         JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
-        String firstType,secondType;
+        String firstType, secondType;
         switch (first.getKind()) {
             case "Identifier" -> {
                 firstType = getVarType(first.get("value"), vars);
-                reports.addAll(visitIdentifier(reports, first, vars,firstType));
+                reports.addAll(visitIdentifier(reports, first, table, vars, firstType));
             }
             case "Boolean" -> firstType = "boolean";
             case "Integer" -> firstType = "int";
             case "BinaryOp" -> {
                 firstType = getTypeOfBinaryOp(first, vars);
-                reports.addAll(visitBinaryOp(reports, first, vars));
+                reports.addAll(visitBinaryOp(reports, first, table, vars));
             }
             default -> {
                 firstType = "invalid_type";
@@ -116,13 +135,13 @@ public class Analysis implements JmmAnalysis {
         switch (second.getKind()) {
             case "Identifier" -> {
                 secondType = getVarType(second.get("value"), vars);
-                reports.addAll(visitIdentifier(reports, second, vars,secondType));
+                reports.addAll(visitIdentifier(reports, second, table, vars, secondType));
             }
             case "Boolean" -> secondType = "boolean";
             case "Integer" -> secondType = "int";
             case "BinaryOp" -> {
                 secondType = getTypeOfBinaryOp(first, vars);
-                reports.addAll(visitBinaryOp(reports, first, vars));
+                reports.addAll(visitBinaryOp(reports, first, table, vars));
             }
             default -> {
                 secondType = "invalid_type";
@@ -131,7 +150,7 @@ public class Analysis implements JmmAnalysis {
         }
         System.out.println("Evaluating " + first.getKind() + " and " + second.getKind());
         System.out.println("Evaluating " + firstType + " " + operator + " " + secondType);
-        switch(operator){
+        switch (operator) {
             //Comparators
             case ">":
             case "<":
@@ -139,16 +158,16 @@ public class Analysis implements JmmAnalysis {
             case "!=":
             case ">=":
             case "<=":
-            //Algebraic Operators
+                //Arithmetic Operators
             case "+":
             case "-":
             case "*":
             case "/":
             case "%":
                 //If Type of one of the operands is invalid, the problem is already reported
-                if(!Objects.equals(firstType, "invalid_type") && !Objects.equals(secondType, "invalid_type")) {
+                if (!Objects.equals(firstType, "invalid_type") && !Objects.equals(secondType, "invalid_type")) {
                     if (!Objects.equals(firstType, "int") || !Objects.equals(secondType, "int")) {
-                            reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'."));
+                        reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'."));
                     }
                 }
                 break;
@@ -159,30 +178,30 @@ public class Analysis implements JmmAnalysis {
             case "/=":
             case "%=":
                 if (!Objects.equals(firstType, "invalid")) {
-                        if (!Objects.equals(first.getKind(), "Identifier")) {
-                            reports.add(createReport(first, "Expected a variable, found '" + first.get("value")));
-                        } else if (!Objects.equals(firstType, secondType)) {
-                            reports.add(createReport(first, "Incompatible types. Cannot use '" + operator + "' with '" + firstType + "' and '" + secondType + "'."));
+                    if (!Objects.equals(first.getKind(), "Identifier")) {
+                        reports.add(createReport(first, "Expected a variable, found '" + first.get("value")));
+                    } else if (!Objects.equals(firstType, secondType)) {
+                        reports.add(createReport(first, "Incompatible types. Cannot use '" + operator + "' with '" + firstType + "' and '" + secondType + "'."));
+                    }
+                    if (!Objects.equals(secondType, "invalid")) {
+                        if (!Objects.equals(secondType, "integer")) {
+                            reports.add(createReport(second, "Trying to increment '" + firstType + "' to '" + secondType + "'."));
                         }
-                        if (!Objects.equals(secondType, "invalid")) {
-                            if (!Objects.equals(secondType, "integer")) {
-                                reports.add(createReport(second,"Trying to increment '" + firstType + "' to '" + secondType + "'."));
-                            }
-                        }
+                    }
                 }
                 break;
             //Logic Operators (Can only be used between booleans)
             case "&&":
             case "||":
-                if(!Objects.equals(firstType, "boolean") || !Objects.equals(secondType, "boolean")){
-                    reports.add(createReport(node,"Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'boolean'."));
+                if (!Objects.equals(firstType, "boolean") || !Objects.equals(secondType, "boolean")) {
+                    reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'boolean'."));
                 }
-            //Bitwise Operators (Can only be used between ints)
+                //Bitwise Operators (Can only be used between ints)
             case "&":
             case "|":
             case "^":
-                if(firstType != "int" || secondType != "int"){
-                    reports.add(createReport(node,"Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'int'."));
+                if (firstType != "int" || secondType != "int") {
+                    reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'int'."));
                 }
             default:
                 System.out.println("OP TYPE NAO CONTABILIZADO EM visitBinaryOP : " + node.get("op"));
@@ -190,81 +209,116 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitReturn(List<Report> reports, JmmNode root, Table table, String methodName){
+    public List<Report> visitReturn(List<Report> reports, JmmNode root, Table table, String methodName) {
         JmmNode child = root.getChildren().get(0);
-        List<Symbol> vars = table.getLocalVariables(methodName);
-        vars.addAll(table.getParameters(methodName));
-        vars.addAll(table.getFields());
+        List<Symbol> vars = getRelevantVars(methodName, table);
         String returnType = table.getReturnType(methodName).getName();
-        switch(child.getKind()){
+        switch (child.getKind()) {
             case "Integer":
-                if (returnType != "int"){
-                    reports.add(createReport(child,"Method " + methodName + " should return" + returnType + " but is returning 'int'."));
+                if (returnType != "int") {
+                    reports.add(createReport(child, "Method " + methodName + " should return" + returnType + " but is returning 'int'."));
                 }
                 break;
             case "Boolean":
-                if (returnType != "boolean"){
-                    reports.add(createReport(child,"Method " + methodName + " should return" + returnType + " but is returning 'boolean'."));
+                if (returnType != "boolean") {
+                    reports.add(createReport(child, "Method " + methodName + " should return" + returnType + " but is returning 'boolean'."));
                 }
                 break;
             case "Identifier":
                 String varName = child.get("value");
-                String varType = getVarType(varName,vars);
-                reports.addAll(visitIdentifier(reports,child,vars,varType));
+                String varType = getVarType(varName, vars);
+                reports.addAll(visitIdentifier(reports, child, table, vars, varType));
                 break;
             case "BinaryOp":
-                String operationType = getTypeOfBinaryOp(child,vars);
+                String operationType = getTypeOfBinaryOp(child, vars);
                 System.out.println("OPERATION TYPE -> " + operationType);
-                if (operationType == "invalid"){
+                if (operationType == "invalid") {
                     System.out.println("CALLING VISITBINARYOP OVER -> " + child.getKind());
-                    reports.addAll(visitBinaryOp(reports,child,vars));
-                }
-                else if (operationType != returnType){
-                    reports.add(createReport(child,"Method " + methodName + " should return '" + returnType + "' but is returning '" + operationType + "'."));
+                    reports.addAll(visitBinaryOp(reports, child, table, vars));
+                } else if (operationType != returnType) {
+                    reports.add(createReport(child, "Method " + methodName + " should return '" + returnType + "' but is returning '" + operationType + "'."));
                 }
                 break;
             case "MethodCalls":
-                visitMethodCalls(reports,child,table,vars);
+                String methodReturnType = getMethodCallType(child, table, vars);
+                String methodCallType = getMethodCallType(child, table, vars);
+                if (!Objects.equals(methodReturnType, returnType) || methodCallType == null) {
+                    String methodCallName = getMethodCallName(child, vars);
+                    reports.add(createReport(child, "Return type of " + methodName + " is '" + returnType + "' but " + methodCallName + " returns '" + methodReturnType + "'."));
+                }
+                reports.addAll(visitMethodCalls(reports, child, table, vars));
                 break;
+            case "ArrayAcess":
+                reports.addAll(visitArrayAcess(reports, child, table, methodName));
         }
         return reports;
     }
 
-    public List<Report> visitMethodCalls(List<Report> reports, JmmNode root, Table table, List<Symbol> vars){
-        String methodClassName = getVarType(root.getChildren().get(0).get("value"), vars);
-        String className = table.getClassName();
-        List<String> imports = table.getImports();
-        if(!isContainedInImports(methodClassName,imports) && !Objects.equals(methodClassName,className)){
-            reports.add(createReport(root,"Class " + methodClassName + " doesn't exist. Maybe you should have imported it?"));
+    public String getMethodCallType(JmmNode node, Table table, List<Symbol> vars) {
+        String methodName = node.getChildren().get(1).get("methodName");
+        String methodClassName = getVarType(node.getChildren().get(0).get("value"), vars);
+        if (table.getClassName() == methodClassName) { //In case it is the class where the method is called
+            return table.getReturnType(methodName).toString();
+        } else return null;
+    }
+
+    public String getMethodCallName(JmmNode node, List<Symbol> vars) {
+        return getVarType(node.getChildren().get(0).get("value"), vars);
+    }
+
+    public List<Report> visitMethodCalls(List<Report> reports, JmmNode root, Table table, List<Symbol> vars) {
+        String childKind = root.getChildren().get(0).getKind();
+        switch (childKind) {
+            case "Identifier":
+                String methodClassName = getVarType(root.getChildren().get(0).get("value"), vars);
+                String className = table.getClassName();
+                List<String> imports = table.getImports();
+                if (!isContainedInImports(methodClassName, imports) && !Objects.equals(methodClassName, className)) {
+                    reports.add(createReport(root, "Class " + methodClassName + " doesn't exist. Maybe you should have imported it?"));
+                }
         }
         return reports;
     }
 
-    public List<Report> visitAssignment(List<Report> reports, JmmNode root, Table table, String methodName){
+    public String getArrayAccessReturn(JmmNode root, Table table, List<Symbol> vars) {
+        JmmNode arrayChild = root.getJmmChild(0);
+        for (Symbol var : vars) {
+            if (var.getName() == arrayChild.get("value")) {
+                return var.getType().getName();
+            }
+        }
+        return null;
+    }
+
+    public List<Report> visitAssignment(List<Report> reports, JmmNode root, Table table, String methodName) {
         System.out.println("Called visitAssignment");
         JmmNode child = root.getChildren().get(0);
-        List<Symbol> vars = table.getLocalVariables(methodName);
-        vars.addAll(table.getParameters(methodName));
-        vars.addAll(table.getFields());
+        List<Symbol> vars = getRelevantVars(methodName, table);
         String varType = getVarType(root.get("var"), vars);
         String kind = child.getKind();
         System.out.println("        visitAssignment :: Descendants of" + root.getKind() + " are " + root.getChildren());
-        switch (child.getKind()){
+        switch (child.getKind()) {
             case "Modifier":
                 System.out.println("???? -> " + child);
                 break;
             case "NewObject":
                 String assignType = child.getChildren().get(0).get("type");
-                if (assignType == "int") assignType += "_array";
-                if (varType == null){
+                if (assignType == "int") assignType += "[]";
+                if (varType == null) {
                     String message = "Variable " + root.get("var") + " does not exist.";
                     reports.add(createReport(root, message));
-                }
-                else if (!Objects.equals(varType, assignType)) {
+                } else if (!Objects.equals(varType, assignType)) {
                     String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
                     reports.add(createReport(root, message));
                 }
                 break;
+            case "ArrayAcess":
+                String arrayReturnType = getArrayAccessReturn(child, table, vars);
+                String arrayType = getVarType(child.getJmmChild(0).get("value"), vars);
+                if (arrayReturnType != varType) {
+                    reports.add(createReport(child, "Assigning variable of type '" + varType + "' to element of array of type '" + arrayType + "'."));
+                }
+                reports.addAll(visitArrayAcess(reports, child, table, methodName));
             case "Integer":
                 assignType = "int";
                 if (!Objects.equals(varType, assignType)) {
@@ -281,48 +335,50 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "Identifier":
                 String varName = child.get("value");
-                varType = getVarType(varName,vars);
-                reports.addAll(visitIdentifier(reports,child,vars,varType));
+                String assignedVarType = getVarType(varName, vars);
+                reports.addAll(visitIdentifier(reports, child, table, vars, assignedVarType));
                 break;
             case "BinaryOp":
-                String operationType = getTypeOfBinaryOp(child,vars);
-                if(operationType == "invalid") {
-                    reports.addAll(visitBinaryOp(reports, child, vars));
-                }
-                else if (operationType != varType){
-                    reports.add(createReport(child,"Assignment between a '" + varType + "' and a '" + operationType +"'."));
+                String operationType = getTypeOfBinaryOp(child, vars);
+                if (operationType == "invalid") {
+                    reports.addAll(visitBinaryOp(reports, child, table, vars));
+                } else if (operationType != varType) {
+                    reports.add(createReport(child, "Assignment between a '" + varType + "' and a '" + operationType + "'."));
                 }
                 break;
             case "MethodCalls":
-                visitMethodCalls(reports,child,table,vars);
+                reports.addAll(visitMethodCalls(reports, child, table, vars));
                 break;
             default:
                 System.out.println("NODE TYPE NAO CONTABILIZADO EM visitAssignment : " + child.getKind());
                 break;
-            }
+        }
         return reports;
     }
 
-    public List<Report> visitIdentifier(List<Report> reports, JmmNode root, List<Symbol> vars, String varType){
-        String assignType = getVarType(root.get("value"),vars);
-        if (assignType == null){ //Checks if variable was previously declared
-            reports.add(createReport(root,"Variable " + root.get("value") + " is not declared."));
-        }
-        else if (assignType != varType){
-            reports.add(createReport(root,"Assignment between a '" + varType + "' and a '" + assignType + "'."));
+    public List<Report> visitIdentifier(List<Report> reports, JmmNode root, Table table, List<Symbol> vars, String varType) {
+        String idType = getVarType(root.get("value"), vars);
+        if (idType == null) { //Checks if variable was previously declared
+            reports.add(createReport(root, "Variable " + root.get("value") + " is not declared."));
+        } else {
+            switch (root.getJmmParent().getKind()) {
+                case "Assignment":
+                    if (idType != varType && idType.equals(table.getClassName()) && !Objects.equals(varType, table.getSuper())) {
+                        reports.add(createReport(root, "Assignment between a '" + varType + "' and a '" + idType + "'."));
+                    }
+                    break;
+                default:
+                    break;
+            }
         }
         return reports;
     }
+
 
     public List<Report> visitDeclaration(List<Report> reports, JmmNode root, Table table, String methodName){
         String varName = root.get("var");
-        List<Symbol> vars = table.getLocalVariables(methodName);
-        vars.addAll(table.getParameters(methodName));
-        vars.addAll(table.getFields());
+        List<Symbol> vars = getRelevantVars(methodName,table);
         String className = table.getClassName(), methodClassName = root.getChildren().get(0).get("type");
-        if (Objects.equals(methodClassName,className)){
-            reports.add(createReport(root,"Creating an object of type '" + className + "' inside the class body."));
-        }
         if (getVarType(varName,vars) == null){
             reports.add(createReport(root,"Variable " + varName + " is already declared."));
         }
@@ -330,9 +386,7 @@ public class Analysis implements JmmAnalysis {
     }
 
     public List<Report> visitMethodBody(List<Report> reports, JmmNode node, Table table, String methodName){
-        List<Symbol> vars = table.getLocalVariables(methodName);
-        vars.addAll(table.getParameters(methodName));
-        vars.addAll(table.getFields());
+        List<Symbol> vars = getRelevantVars(methodName,table);
         for(JmmNode child : node.getChildren()){
             switch(child.getKind()) {
                 case "Assignment":
@@ -351,6 +405,48 @@ public class Analysis implements JmmAnalysis {
                     System.out.println("    visitMethod :: NODE TYPE NAO CONTABILIZADO " + child.getKind());
                     break;
             }
+        }
+        return reports;
+    }
+
+    public List<Report> visitArrayAcess(List<Report> reports, JmmNode root, Table table, String methodName){
+        List<Symbol> vars = getRelevantVars(methodName,table);
+        JmmNode varChild = root.getChildren().get(0);
+        System.out.println(varChild);
+        JmmNode indexChild = root.getChildren().get(1);
+        String varName = varChild.get("value");
+        if (getVarType(varName,vars) == null){
+            reports.add(createReport(varChild,"Variable " + varName + " was not declared."));
+        }
+        else if (!isVarArray(varName,vars)){
+            reports.add(createReport(varChild,"Array Access over variable " + varName + " which is not an array."));
+        }
+        switch(indexChild.getKind()){
+            case "Integer":
+                break;
+            case "Identifier":
+                String accessVarName = indexChild.get("value");
+                String accessVarType = getVarType(accessVarName,vars);
+                if (accessVarType != "int"){
+                    reports.add(createReport(indexChild,"Array Access Index should be of type 'int'."));
+                }
+                else {
+                    reports.addAll(visitIdentifier(reports, indexChild, table, vars, getVarType(accessVarName, vars)));
+                }
+        }
+        return reports;
+    }
+
+    public List<Report> visitExprStmt(List<Report> reports, JmmNode root, Table table, String methodName){
+        List<Symbol> vars = getRelevantVars(methodName,table);
+        switch(root.getChildren().get(0).getKind()){
+            case "BinaryOp":
+                reports.addAll(visitBinaryOp(reports,root,table,vars));
+                break;
+            case "ArrayAcess":
+                break;
+            case "MethodCalls":
+                reports.addAll(visitMethodCalls(reports,root,table,vars));
         }
         return reports;
     }
@@ -387,6 +483,9 @@ public class Analysis implements JmmAnalysis {
                     case "Type":
                         returnType = node.get("type");
                         break;
+                    case "ExprStmt":
+                        reports.addAll(visitExprStmt(reports,node,table, name));
+                        break;
                     default:
                         System.out.println("    visitMethod :: NODE TYPE NAO CONTABILIZADO " + node.getKind());
                         break;
@@ -411,8 +510,10 @@ public class Analysis implements JmmAnalysis {
                 case "ClassMethod":
                     reports.addAll(visitMethod(reports, node, table));
                     break;
+                case "ImportPackage":
+                    break;
                 default:
-                    System.out.println("semanticAnalysis :: NODE TYPE NAO CONTABILIZADO " + node.getKind());
+                    System.out.println("visitProgram :: NODE TYPE NAO CONTABILIZADO " + node.getKind());
                     break;
             }
             //Se for um dos abaixo, ignorar
@@ -429,11 +530,10 @@ public class Analysis implements JmmAnalysis {
         System.out.println("Called semanticAnalysis");
 
         //New Code Below:
-        JmmSemanticsResult res = new JmmSemanticsResult(parserResult, visitor.getTable(), parserResult.getReports());
         JmmNode root = parserResult.getRootNode();
         List<Report> reports = new ArrayList<Report>();
         reports = eraseDuplicateReports(visitProgram(reports,root,table));
-        res = new JmmSemanticsResult(parserResult, visitor.getTable(), reports);
+        JmmSemanticsResult res = new JmmSemanticsResult(parserResult, visitor.getTable(), reports);
         System.out.println("DETECTED ERRORS:");
         for(Report r : reports){
             System.out.println("Error (Line " + r.getLine() + "):" + r.getMessage());
