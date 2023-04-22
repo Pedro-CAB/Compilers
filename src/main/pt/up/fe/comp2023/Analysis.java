@@ -243,7 +243,7 @@ public class Analysis implements JmmAnalysis {
             case "MethodCalls":
                 String methodReturnType = getMethodCallType(child, table, vars);
                 String methodCallType = getMethodCallType(child, table, vars);
-                if (!Objects.equals(methodReturnType, returnType) || methodCallType == null) {
+                if (!Objects.equals(methodReturnType, returnType) && methodCallType != null) {
                     String methodCallName = getMethodCallName(child, vars);
                     reports.add(createReport(child, "Return type of " + methodName + " is '" + returnType + "' but " + methodCallName + " returns '" + methodReturnType + "'."));
                 }
@@ -268,13 +268,19 @@ public class Analysis implements JmmAnalysis {
     }
 
     public List<Report> visitMethodCalls(List<Report> reports, JmmNode root, Table table, List<Symbol> vars) {
+        System.out.println("called visitMethodCalls");
         String childKind = root.getChildren().get(0).getKind();
+        System.out.println(childKind);
         if ("Identifier".equals(childKind)) {
             String methodClassName = getVarType(root.getChildren().get(0).get("value"), vars);
             String className = table.getClassName();
             List<String> imports = table.getImports();
             if (!isContainedInImports(methodClassName, imports) && !Objects.equals(methodClassName, className)) {
                 reports.add(createReport(root, "Class " + methodClassName + " doesn't exist. Maybe you should have imported it?"));
+            }
+            String calledMethodName = root.getJmmChild(1).get("methodName");
+            if (Objects.equals(methodClassName, className) && !table.getMethods().contains(calledMethodName)){
+                reports.add(createReport(root, "Method " + calledMethodName + " is not declared."));
             }
         }
         return reports;
@@ -402,7 +408,11 @@ public class Analysis implements JmmAnalysis {
                     reports.addAll(visitReturn(reports, child, table, methodName));
                     break;
                 case "IfElse":
-                    reports.addAll(visitIfElse(reports,node,table,methodName));
+                    reports.addAll(visitIfElse(reports,child,table,methodName));
+                    break;
+                case "ExprStmt":
+                    reports.addAll(visitExprStmt(reports,child,table, methodName));
+                    break;
                 default:
                     System.out.println("    visitMethodBody :: NODE TYPE NAO CONTABILIZADO " + child.getKind());
                     break;
@@ -440,15 +450,18 @@ public class Analysis implements JmmAnalysis {
     }
 
     public List<Report> visitExprStmt(List<Report> reports, JmmNode root, Table table, String methodName){
+        System.out.println("called visitExprSmt");
+        System.out.println(root.getChildren().get(0).getKind());
         List<Symbol> vars = getRelevantVars(methodName,table);
-        switch(root.getChildren().get(0).getKind()){
+        JmmNode child = root.getChildren().get(0);
+        switch(child.getKind()){
             case "BinaryOp":
-                reports.addAll(visitBinaryOp(reports,root,table,vars, methodName));
+                reports.addAll(visitBinaryOp(reports,child,table,vars, methodName));
                 break;
             case "ArrayAcess":
                 break;
             case "MethodCalls":
-                reports.addAll(visitMethodCalls(reports,root,table,vars));
+                reports.addAll(visitMethodCalls(reports,child,table,vars));
         }
         return reports;
     }
