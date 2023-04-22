@@ -14,29 +14,29 @@ import pt.up.fe.comp2023.symbol.table.TableVisitor;
 
 public class Analysis implements JmmAnalysis {
 
-    public List<Symbol> getRelevantVars(String methodName, Table table) {
+    private List<Symbol> getRelevantVars(String methodName, Table table) {
         List<Symbol> vars = table.getLocalVariables(methodName);
         vars.addAll(table.getParameters(methodName));
         vars.addAll(table.getFields());
         return vars;
     }
 
-    public Report createReport(JmmNode node, String message) {
+    private Report createReport(JmmNode node, String message) {
         int startLine = Integer.parseInt(node.get("lineStart")), startColumn = Integer.parseInt(node.get("colStart"));
         System.out.println("NEW ERROR IN LINE " + startLine + "  ! -> " + message);
         return new Report(ReportType.ERROR, Stage.SEMANTIC, startLine, startColumn, message);
     }
 
-    public List<Report> eraseDuplicateReports(List<Report> reports) {
+    private List<Report> eraseDuplicateReports(List<Report> reports) {
         Set<Report> set = new HashSet<>(reports);
         return new ArrayList<>(set);
     }
 
-    public Boolean isContainedInImports(String className, List<String> imports) {
+    private Boolean isContainedInImports(String className, List<String> imports) {
         return imports.contains("import " + className + ";\n");
     }
 
-    public Boolean isVarArray(String varName, List<Symbol> vars) {
+    private Boolean isVarArray(String varName, List<Symbol> vars) {
         for (Symbol var : vars) {
             if (Objects.equals(var.getName(), varName)) {
                 if (var.getType().isArray())
@@ -46,7 +46,7 @@ public class Analysis implements JmmAnalysis {
         return false;
     }
 
-    public String getVarType(String varName, List<Symbol> vars) {
+    private String getVarType(String varName, List<Symbol> vars) {
         for (Symbol var : vars) {
             if (Objects.equals(var.getName(), varName)) {
                 if (var.getType().isArray() && !Objects.equals(var.getType().getName(), "String"))
@@ -58,7 +58,7 @@ public class Analysis implements JmmAnalysis {
         return null;
     }
 
-    public String getTypeOfBinaryOp(JmmNode node, List<Symbol> vars) {
+    private String getTypeOfBinaryOp(JmmNode node, List<Symbol> vars) {
         JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
         String firstType, secondType;
         System.out.println(vars);
@@ -104,7 +104,7 @@ public class Analysis implements JmmAnalysis {
         }
     }
 
-    public List<Report> visitBinaryOp(List<Report> reports, JmmNode node, Table table, List<Symbol> vars, String methodName) {
+    private List<Report> visitBinaryOp(List<Report> reports, JmmNode node, Table table, List<Symbol> vars, String methodName) {
         System.out.println("Called visitBinaryOp");
         String operator = node.get("op");
         JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
@@ -210,7 +210,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitReturn(List<Report> reports, JmmNode root, Table table, String methodName) {
+    private List<Report> visitReturn(List<Report> reports, JmmNode root, Table table, String methodName) {
         JmmNode child = root.getChildren().get(0);
         List<Symbol> vars = getRelevantVars(methodName, table);
         String returnType = table.getReturnType(methodName).getName();
@@ -255,7 +255,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public String getMethodCallType(JmmNode node, Table table, List<Symbol> vars) {
+    private String getMethodCallType(JmmNode node, Table table, List<Symbol> vars) {
         String methodName = node.getChildren().get(1).get("methodName");
         String methodClassName = getVarType(node.getChildren().get(0).get("value"), vars);
         if (Objects.equals(table.getClassName(), methodClassName)) { //In case it is the class where the method is called
@@ -263,11 +263,11 @@ public class Analysis implements JmmAnalysis {
         } else return null;
     }
 
-    public String getMethodCallName(JmmNode node, List<Symbol> vars) {
+    private String getMethodCallName(JmmNode node, List<Symbol> vars) {
         return getVarType(node.getChildren().get(0).get("value"), vars);
     }
 
-    public List<Report> visitMethodCalls(List<Report> reports, JmmNode root, Table table, List<Symbol> vars) {
+    private List<Report> visitMethodCalls(List<Report> reports, JmmNode root, Table table, List<Symbol> vars) {
         System.out.println("called visitMethodCalls");
         String childKind = root.getChildren().get(0).getKind();
         System.out.println(childKind);
@@ -289,7 +289,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public String getArrayAccessReturn(JmmNode root, List<Symbol> vars) {
+    private String getArrayAccessReturn(JmmNode root, List<Symbol> vars) {
         JmmNode arrayChild = root.getJmmChild(0);
         for (Symbol var : vars) {
             if (Objects.equals(var.getName(), arrayChild.get("value"))) {
@@ -299,7 +299,7 @@ public class Analysis implements JmmAnalysis {
         return null;
     }
 
-    public List<Report> visitAssignment(List<Report> reports, JmmNode root, Table table, String methodName) {
+    private List<Report> visitAssignment(List<Report> reports, JmmNode root, Table table, String methodName) {
         System.out.println("Called visitAssignment");
         JmmNode child = root.getChildren().get(0);
         List<Symbol> vars = getRelevantVars(methodName, table);
@@ -365,7 +365,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitIdentifier(List<Report> reports, JmmNode root, Table table, List<Symbol> vars, String varType) {
+    private List<Report> visitIdentifier(List<Report> reports, JmmNode root, Table table, List<Symbol> vars, String varType) {
         String idType = getVarType(root.get("value"), vars);
         if (idType == null) { //Checks if variable was previously declared
             reports.add(createReport(root, "Variable " + root.get("value") + " is not declared."));
@@ -387,7 +387,7 @@ public class Analysis implements JmmAnalysis {
     }
 
 
-    public List<Report> visitDeclaration(List<Report> reports, JmmNode root, Table table, String methodName){
+    private List<Report> visitDeclaration(List<Report> reports, JmmNode root, Table table, String methodName){
         String varName = root.get("var");
         List<Symbol> vars = getRelevantVars(methodName,table);
         String className = table.getClassName(), methodClassName = root.getChildren().get(0).get("type");
@@ -397,7 +397,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitMethodBody(List<Report> reports, JmmNode node, Table table, String methodName){
+    private List<Report> visitMethodBody(List<Report> reports, JmmNode node, Table table, String methodName){
         List<Symbol> vars = getRelevantVars(methodName,table);
         for(JmmNode child : node.getChildren()){
             switch(child.getKind()) {
@@ -445,7 +445,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitArrayAcess(List<Report> reports, JmmNode root, Table table, String methodName){
+    private List<Report> visitArrayAcess(List<Report> reports, JmmNode root, Table table, String methodName){
         List<Symbol> vars = getRelevantVars(methodName,table);
         JmmNode varChild = root.getChildren().get(0);
         System.out.println(varChild);
@@ -473,7 +473,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitExprStmt(List<Report> reports, JmmNode root, Table table, String methodName){
+    private List<Report> visitExprStmt(List<Report> reports, JmmNode root, Table table, String methodName){
         System.out.println("called visitExprSmt");
         System.out.println(root.getChildren().get(0).getKind());
         List<Symbol> vars = getRelevantVars(methodName,table);
@@ -490,7 +490,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitMethod(List<Report> reports, JmmNode root, Table table){
+    private List<Report> visitMethod(List<Report> reports, JmmNode root, Table table){
         System.out.println("    Called visitMethod \n");
         Queue<JmmNode> queue = new LinkedList<>();
         queue.addAll(root.getChildren());
@@ -535,7 +535,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitIfElse(List<Report> reports, JmmNode node, Table table, String methodName) {
+    private List<Report> visitIfElse(List<Report> reports, JmmNode node, Table table, String methodName) {
         JmmNode condition = node.getJmmChild(0), ifNode = node.getJmmChild(1), elseNode = null;
         if(node.getChildren().size() == 3) elseNode = node.getJmmChild(2);
         switch(condition.getKind()){
@@ -556,7 +556,7 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-    public List<Report> visitProgram(List<Report> reports, JmmNode node, Table table){
+    private List<Report> visitProgram(List<Report> reports, JmmNode node, Table table){
         Queue<JmmNode> queue = new LinkedList<>();
         queue.add(node);
         while (queue.size() > 0){
