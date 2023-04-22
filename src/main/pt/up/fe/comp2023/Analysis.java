@@ -340,7 +340,7 @@ public class Analysis implements JmmAnalysis {
                 }
                 break;
             case "Identifier":
-                String varName = child.get("value");
+                String varName = root.get("var");
                 String assignedVarType = getVarType(varName, vars);
                 reports.addAll(visitIdentifier(reports, child, table, vars, assignedVarType));
                 break;
@@ -369,8 +369,11 @@ public class Analysis implements JmmAnalysis {
         } else {
             switch (root.getJmmParent().getKind()) {
                 case "Assignment":
-                    if (idType != varType && idType.equals(table.getClassName()) && !Objects.equals(varType, table.getSuper())) {
-                        reports.add(createReport(root, "Assignment between a '" + varType + "' and a '" + idType + "'."));
+                    if (!Objects.equals(varType, idType)) {
+                        if (!(Objects.equals(varType, table.getClassName()) && idType.equals(table.getSuper())) &&
+                                !(Objects.equals(idType, table.getClassName()) && varType.equals(table.getSuper())) &&
+                                (!isContainedInImports(idType,table.getImports()) || !isContainedInImports(varType,table.getImports())))
+                            reports.add(createReport(root, "Assignment between a '" + varType + "' and a '" + idType + "'."));
                     }
                     break;
                 default:

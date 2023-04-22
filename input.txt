@@ -1,18 +1,22 @@
 import A;
+import B;
 
-class AssumeArguments {
+class ObjectAssignmentPassImports {
 
     public static void main(String[] args) {
 
     }
 
-    public int bar() {
+    public A foo() {
         A a;
-        boolean b;
+        B b;
 
         a = new A();
-        b = true;
+        b = new B();
 
-        return a.foo(b);
+        // A and B imported, assume it is correct
+        a = b;
+
+        return a;
     }
 }
