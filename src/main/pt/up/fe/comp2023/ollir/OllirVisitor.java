@@ -172,7 +172,14 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         String method = symbolTable.getMethods().get(methodIndex);
 
-        ollirCode += "\t.method public " + method + "(";
+        if (method.equals("main")){
+            ollirCode += "\t.method public static " + method + "(";
+        }
+        else{
+            ollirCode += "\t.method public " + method + "(";
+        }
+
+
 
         List<Symbol> parameters = symbolTable.getParameters(method);
 
