@@ -302,9 +302,12 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         else if (type.equals(".bool"))
             ollirCode += type + " :=" + type + " 0.bool;\n";
         else if (type.equals(".array.i32")) {
-            ollirCode += type + ":=" + type + "new(array)" + type+ ";\n";
-        } else
-            ollirCode += type + " :=" + type + ";\n";
+            ollirCode += type + ":=" + type + " new(array)" + type+ ";\n";
+        } else{
+            ollirCode += type + " :=" + type + " new(" + local_var.getType().getName() +")"+ type +";\n";
+            ollirCode += "\t\tinvokespecial(" + local_var.getName() + type + ",\"<init>\").V;\n";
+        }
+
 
         localIndex++;
 
@@ -359,7 +362,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         else if (isInvokeVirtual(method_name)){
 
             if (symbolTable.getParameters(method_name).size() > 0){
-                ollirCode += "\t\tinvokevirtual("+ object + object_type + ",\"" + method_name + "\", " +
+                ollirCode += "\t\tinvokevirtual("+ object + object_type + ", \"" + method_name + "\", " +
                         method_arg + arg_type + ")" + getType(
                         symbolTable.getReturnType(method_name)) + ";\n";
             }
