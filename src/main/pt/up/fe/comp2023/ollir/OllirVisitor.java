@@ -268,6 +268,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         if (!Objects.equals(child.getKind(), "BinaryOp")){
             ollirCode += "\t\tret" + getType(ret) + " " + child.get("value") + getType(ret) + ";\n";
+            localIndex = 0;
         }
         else {
 
@@ -355,24 +356,29 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
     private String dealWithBinaryOp(JmmNode jmmNode, String method){
 
         String s = "";
+        int i = 0;
 
-        for (int i = 0; i < jmmNode.getNumChildren(); i++){
-            JmmNode child = jmmNode.getJmmChild(i);
+        JmmNode child;
+        for (i = 0; i < jmmNode.getNumChildren(); i++){
+            child = jmmNode.getJmmChild(i);
+
+            if (Objects.equals(child.getKind(), "BinaryOp")){
+                dealWithBinaryOp(child, method);
+                i++;
+            }
 
             Symbol local = symbolTable.getLocalVariables(method).get(localIndex);
-
+            child = jmmNode.getJmmChild(i);
             if (local.getName().equals(child.get("value")) && i == jmmNode.getNumChildren()- 1){
                 s += child.get("value") + getType(local.getType());
-                localIndex++;
             }
             else{
                 s += child.get("value") + getType(local.getType()) + " " + getOpType(jmmNode.get("op"));
-                localIndex++;
             }
+            localIndex++;
 
 
         }
-        localIndex = 0;
         return s;
     }
 
