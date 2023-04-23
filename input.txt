@@ -1,16 +1,14 @@
-class ArrayInWhileCondition {
+class ThisTest extends Something {
 
     public static void main(String[] args) {
 
     }
 
     public int foo() {
-        int[] a;
-        a = new int[2];
-
-        while (a) {
-        }
-
-        return 0;
+        ThisTest a;
+        Something b;
+        a = this;
+        b = this;
+        return this;
     }
 }
