@@ -322,6 +322,16 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         String method_name = method_aux.get("methodName");
         String method_arg = "";
 
+        String object = jmmNode.getJmmChild(0).get("value");
+
+        String object_type = "";
+
+        for (Symbol obj : symbolTable.getLocalVariables(method)){
+            if (obj.getName().equals(object)){
+                object_type = getType(obj.getType());
+            }
+        }
+
         String method_sup;
 
         String arg_type = "";
@@ -349,11 +359,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         else if (isInvokeVirtual(method_name)){
 
             if (symbolTable.getParameters(method_name).size() > 0){
-                ollirCode += "\t\tinvokevirtual(this, " + "\"" + method_name + "\", " +
+                ollirCode += "\t\tinvokevirtual("+ object + object_type + ",\"" + method_name + "\", " +
                         method_arg + arg_type + ").V;\n";
             }
             else{
-                ollirCode += "\t\tinvokevirtual(this, " + "\"" + method_name + "\"" + ")"+ getType(
+                ollirCode += "\t\tinvokevirtual(" + object + object_type+  ",\"" + method_name + "\"" + ")"+ getType(
                         symbolTable.getReturnType(method_name)) + ";\n";
             }
         }

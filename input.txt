@@ -1,7 +1,10 @@
-import io;
-
 class MyClass{
-    public int testes(){
-       io.print(1);
+    public int teste(){
+        return 3;
+    }
+
+    public int yi(){
+       int b;
+       b.teste();
     }
 }
