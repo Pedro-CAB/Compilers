@@ -1,5 +1,10 @@
 class MyClass{
-    public MyClass teste(){
-       return a;
+    public int teste(){
+        return 3;
+    }
+
+    public int yi(){
+       int b;
+       b.teste();
     }
 }

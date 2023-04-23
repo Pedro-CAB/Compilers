@@ -342,19 +342,24 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 arg_type += ".i32";
             }
 
-            ollirCode += "\t\tinvokestatic(" + method_sup + ", "+ "\"" + method_name + "\", " +
-                    method_arg + arg_type + ").V;\n";
-        }
-        else{
 
-            if (isInvokeVirtual(method_arg)){
-                ollirCode += "\t\tinvokevirtual(this, " + "\"" + method_name + "\", " +
+
+            else{
+                ollirCode += "\t\tinvokestatic(" + method_sup + ", "+ "\"" + method_name + "\", " +
                         method_arg + arg_type + ").V;\n";
-
             }
         }
+        else if (isInvokeVirtual(method_name)){
 
-
+            if (symbolTable.getParameters(method_name).size() > 0){
+                ollirCode += "\t\tinvokevirtual(this, " + "\"" + method_name + "\", " +
+                        method_arg + arg_type + ").V;\n";
+            }
+            else{
+                ollirCode += "\t\tinvokevirtual(this, " + "\"" + method_name + "\"" + ")"+ getType(
+                        symbolTable.getReturnType(method_name)) + ";\n";
+            }
+        }
         return "";
     }
 
