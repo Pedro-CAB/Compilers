@@ -4,7 +4,8 @@ class MyClass{
     }
 
     public int yi(){
-       int b;
+       MyClass b;
+       b = new MyClass();
        b.teste();
     }
 }
