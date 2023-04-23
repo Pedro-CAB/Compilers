@@ -48,7 +48,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         StringBuilder ollir = new StringBuilder();
 
-        if (type.isArray()) ollir.append(".array.i32");
+        if (type.isArray()) ollir.append(".array");
 
         if ("int".equals(type.getName())) {
             ollir.append(".i32");
@@ -142,6 +142,9 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         }
 
         for (Symbol field : symbolTable.getFields()){
+
+
+
             ollirCode += "\t.field private " + field.getName();
 
             String type = getType(field.getType());
@@ -287,6 +290,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         Symbol local_var = symbolTable.getLocalVariables(s).get(localIndex);
 
+
         ollirCode += "\t\t" + local_var.getName();
         String type;
 
@@ -296,7 +300,9 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             ollirCode += type + " :=" + type + " 0.i32;\n";
         else if (type.equals(".bool"))
             ollirCode += type + " :=" + type + " 0.bool;\n";
-        else
+        else if (type.equals(".array.i32")) {
+            ollirCode += type + ":=" + type + "new(array)" + type+ ";\n";
+        } else
             ollirCode += type + " :=" + type + ";\n";
 
         localIndex++;
