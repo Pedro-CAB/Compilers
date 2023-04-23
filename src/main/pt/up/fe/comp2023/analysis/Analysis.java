@@ -255,6 +255,14 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "ArrayAcess":
                 reports.addAll(visitArrayAcess(reports, child));
+            case "Self":
+                if(isMethodStatic){
+                    reports.add(createReport(child,"'this' cannot be used in a static method."));
+                }
+                else if(!Objects.equals(returnType, table.getClassName()) && !Objects.equals(returnType, table.getSuper())){
+                    reports.add(createReport(child,"Returning '" + table.getClassName() + "' when expecting to return '" + returnType + "'."));
+                }
+                break;
         }
         return reports;
     }
@@ -272,22 +280,34 @@ public class Analysis implements JmmAnalysis {
 
     private List<Report> visitMethodCalls(List<Report> reports, JmmNode root) {
         System.out.println("called visitMethodCalls");
-        String childKind = root.getChildren().get(0).getKind();
+        JmmNode child = root.getJmmChild(0);
+        String childKind = child.getKind();
         System.out.println(childKind);
-        if ("Identifier".equals(childKind)) {
-            String methodClassName = getVarType(root.getChildren().get(0).get("value"));
-            String className = table.getClassName();
-            List<String> imports = table.getImports();
-            if (!isContainedInImports(methodClassName, imports) && !Objects.equals(methodClassName, className)) {
-                reports.add(createReport(root, "Class " + methodClassName + " doesn't exist. Maybe you should have imported it?"));
-            }
-            String calledMethodName = root.getJmmChild(1).get("methodName");
-            System.out.println(methodClassName);
-            System.out.println(className);
-            System.out.println();
-            if (Objects.equals(methodClassName, className) && !table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(), "")){
-                reports.add(createReport(root, "Method " + calledMethodName + " is not declared."));
-            }
+        switch (childKind) {
+            case "Identifier":
+                String methodClassName = getVarType(root.getChildren().get(0).get("value"));
+                String className = table.getClassName();
+                List<String> imports = table.getImports();
+                if (!isContainedInImports(methodClassName, imports) && !Objects.equals(methodClassName, className)) {
+                    reports.add(createReport(root, "Class " + methodClassName + " doesn't exist. Maybe you should have imported it?"));
+                }
+                String calledMethodName = root.getJmmChild(1).get("methodName");
+                System.out.println(methodClassName);
+                System.out.println(className);
+                System.out.println();
+                if (Objects.equals(methodClassName, className) && !table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(), "")) {
+                    reports.add(createReport(root, "Method " + calledMethodName + " is not declared."));
+                }
+                break;
+            case "Self":
+                String methodName = root.getJmmChild(1).get("methodName");
+                if(isMethodStatic){
+                    reports.add(createReport(child,"'this' cannot be used in a static method."));
+                }
+                else if(!table.getMethods().contains(methodName)){
+                    reports.add(createReport(child,"Method " + methodName + " was not declared."));
+                }
+                break;
         }
         return reports;
     }
@@ -360,6 +380,14 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "MethodCalls":
                 reports.addAll(visitMethodCalls(reports, child));
+                break;
+            case "Self":
+                if(isMethodStatic){
+                    reports.add(createReport(child,"'this' cannot be used in a static method."));
+                }
+                else if(!Objects.equals(varType, table.getClassName()) && !Objects.equals(varType, table.getSuper())){
+                    reports.add(createReport(child,"Assigning '" + table.getClassName() + "' to '" + varType + "'."));
+                }
                 break;
             default:
                 System.out.println("NODE TYPE NAO CONTABILIZADO EM visitAssignment : " + child.getKind());
