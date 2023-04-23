@@ -142,7 +142,7 @@ public class TableVisitor extends AJmmVisitor<String, String> {
     private String dealWithFields(JmmNode jmmNode, String s) {
         StringBuilder ret = new StringBuilder();
         JmmNode declaration = jmmNode.getJmmChild(0);
-        boolean isArray = Objects.equals(jmmNode.getJmmChild(0).getKind(), "ArrayType");
+        boolean isArray = Objects.equals(declaration.getJmmChild(0).getKind(), "ArrayType");
 
         String type_name = declaration.getJmmChild(0).get("type");
         Type type = new Type(type_name, isArray);
