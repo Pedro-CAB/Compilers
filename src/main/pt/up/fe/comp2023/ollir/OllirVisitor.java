@@ -364,7 +364,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                         symbolTable.getReturnType(method_name)) + ";\n";
             }
             else{
-                ollirCode += "\t\tinvokevirtual(this," +  "\"" + method_name + "\","+ object + object_type + ")"+ getType(
+                ollirCode += "\t\tinvokevirtual(" + object + object_type + ", \"" + method_name + "\"" + ")"+ getType(
                         symbolTable.getReturnType(method_name)) + ";\n";
             }
         }
