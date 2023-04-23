@@ -338,10 +338,15 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 }
             }
 
+            if (arg_type.equals("") && Objects.equals(temp.getJmmChild(0).getKind(), "Integer")){
+                arg_type += ".i32";
+            }
+
             ollirCode += "\t\tinvokestatic(" + method_sup + ", "+ "\"" + method_name + "\", " +
                     method_arg + arg_type + ").V;\n";
         }
         else{
+
             if (isInvokeVirtual(method_arg)){
                 ollirCode += "\t\tinvokevirtual(this, " + "\"" + method_name + "\", " +
                         method_arg + arg_type + ").V;\n";
