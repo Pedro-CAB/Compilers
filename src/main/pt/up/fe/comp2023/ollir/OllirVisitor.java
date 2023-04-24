@@ -63,21 +63,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return ollir.toString();
     }
 
-    public static String getType(String type) {
-        StringBuilder ollir = new StringBuilder();
-
-        switch (type) {
-            case "array" -> ollir.append(".array");
-            case "int" -> ollir.append(".i32");
-            case "bool" -> ollir.append(".bool");
-            case "void" -> ollir.append(".V");
-            default -> ollir.append(".").append(type);
-        }
-
-        return ollir.toString();
-    }
-
-
     public String getParamType(String val_param, String method){
 
         for (Symbol param : symbolTable.getParameters(method)){
@@ -87,6 +72,17 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         return "";
     }
+
+    public String getFieldType(String field, String method){
+
+        for (Symbol f : symbolTable.getFields()){
+            if (Objects.equals(f.getName(), field))
+                return getType(f.getType());
+        }
+
+        return "";
+    }
+
 
     public String getOpType(String op){
         if(op.equals("&") || op.equals("|") || op.equals("^")
@@ -225,7 +221,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                         dealWithAssignments(c, method);
                     else if (Objects.equals(c.getKind(), "MethodCalls"))
                         dealWithMethodInvocation(c, method);
-
                     else if (Objects.equals(c.getKind(), "BinaryOp"))
                         dealWithBinaryOp(c, s);
                     else if (Objects.equals(c.getKind(), "ExprStmt")){
@@ -349,6 +344,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 if (Objects.equals(method_arg, symbol.getName())){
                     arg_type += getType(symbol.getType());
                 }
+            }
+            if (arg_type.equals("")){
+                arg_type += getParamType(method_arg, method);
+                arg_type += getFieldType(method_arg, method);
+
             }
 
             if (arg_type.equals("") && Objects.equals(temp.getJmmChild(0).getKind(), "Integer")){
