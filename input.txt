@@ -1,11 +1,10 @@
 class MyClass{
+    int b;
     public int teste(){
         return 3;
     }
 
     public int yi(){
-       MyClass b;
-       b = new MyClass();
        b.teste();
     }
 }
