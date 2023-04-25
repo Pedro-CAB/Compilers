@@ -93,7 +93,26 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
-    private String findType(String val, String method){
+    private String findType(JmmNode node, String method){
+
+        String val = node.get("value");
+
+        switch (node.getKind()) {
+            case "Integer" -> {
+                return ".i32";
+            }
+            case "Boolean" -> {
+                return ".bool";
+            }
+            case "String" -> {
+                return ".string";
+            }
+            case "Void" -> {
+                return ".V";
+            }
+            default -> {
+            }
+        }
 
         return getParamType(val, method) + getFieldType(val) + getLocalType(val, method);
     }
@@ -298,17 +317,17 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         type = getType(local_var.getType());
 
-        if (type.equals(".i32")){
-            String val = jmmNode.getJmmChild(0).get("value");
-            ollirCode += type + " :=" + type + " " + val + type +";\n";
-        }
-        else if (type.equals(".bool"))
-            ollirCode += type + " :=" + type + " 0.bool;\n";
-        else if (type.equals(".array.i32")) {
-            ollirCode += type + ":=" + type + " new(array)" + type+ ";\n";
-        } else{
-            ollirCode += type + " :=" + type + " new(" + local_var.getType().getName() +")"+ type +";\n";
-            ollirCode += "\t\tinvokespecial(" + local_var.getName() + type + ",\"<init>\").V;\n";
+        switch (type) {
+            case ".i32" -> {
+                String val = jmmNode.getJmmChild(0).get("value");
+                ollirCode += type + " :=" + type + " " + val + type + ";\n";
+            }
+            case ".bool" -> ollirCode += type + " :=" + type + " 0.bool;\n";
+            case ".array.i32" -> ollirCode += type + ":=" + type + " new(array)" + type + ";\n";
+            default -> {
+                ollirCode += type + " :=" + type + " new(" + local_var.getType().getName() + ")" + type + ";\n";
+                ollirCode += "\t\tinvokespecial(" + local_var.getName() + type + ",\"<init>\").V;\n";
+            }
         }
 
 
@@ -390,7 +409,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 dealWithBinaryOp(child, method);
             }
             else{
-                String val_type = findType(child.get("value"), method);
+                String val_type = findType(child, method);
 
                 if (i == jmmNode.getNumChildren()-1){
                     if (tempIndex > 1){
