@@ -73,7 +73,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
-    public String getFieldType(String field, String method){
+    public String getFieldType(String field){
 
         for (Symbol f : symbolTable.getFields()){
             if (Objects.equals(f.getName(), field))
@@ -83,23 +83,30 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
+    public String getLocalType(String local, String method){
 
-    public String getOpType(String op){
-        if(op.equals("&") || op.equals("|") || op.equals("^")
-                || op.equals("&&") || op.equals("||") ||
-                op.equals("<") || op.equals("<=")  || op.equals(">")
-                || op.equals(">=")
-        ){
-            return op + ".bool ";
+        for (Symbol l : symbolTable.getLocalVariables(method)){
+            if (Objects.equals(l.getName(), local))
+                return getType(l.getType());
         }
 
-        else if (op.equals("+")  || op.equals("-") || op.equals("*") ||
-                op.equals("/") || op.equals("%")){
-            return op + ".i32 ";
-        }
+        return "";
+    }
 
-        else
-            return "";
+    private String findType(String val, String method){
+
+        return getParamType(val, method) + getFieldType(val) + getLocalType(val, method);
+    }
+
+
+    private String getOptype(String op){
+        if (op.equals("+") | op.equals("-") | op.equals("*") | op.equals("/") | op.equals("%")){
+            return ".i32";
+        }
+        else if (op.equals("&&") | op.equals("||") | op.equals("^")){
+            return ".bool";
+        }
+        return "";
     }
 
     private boolean isInvokeVirtual(String method_name){
@@ -266,15 +273,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             localIndex = 0;
         }
         else {
-
-            String temp = "t" + tempIndex + getType(ret);
-            String exp = temp + " :=" + getType(ret)+ " ";
-            exp += dealWithBinaryOp(child, method);
-
-            exp += ";\n";
-
-            ollirCode += "\t\t" + exp;
-            ollirCode += "\t\tret" + getType(ret) + " " + temp + ";\n";
+            dealWithBinaryOp(child, method);
+            ollirCode += "\t\tret" + getType(ret) + " " + "t" + tempIndex + getType(ret) + ";\n";
             tempIndex++;
 
         }
@@ -292,8 +292,12 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         type = getType(local_var.getType());
 
-        if (type.equals(".i32"))
-            ollirCode += type + " :=" + type + " 0.i32;\n";
+
+
+        if (type.equals(".i32")){
+            String val = jmmNode.getJmmChild(0).get("value");
+            ollirCode += type + " :=" + type + " " + val + type +";\n";
+        }
         else if (type.equals(".bool"))
             ollirCode += type + " :=" + type + " 0.bool;\n";
         else if (type.equals(".array.i32")) {
@@ -347,7 +351,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
             if (arg_type.equals("")){
                 arg_type += getParamType(method_arg, method);
-                arg_type += getFieldType(method_arg, method);
+                arg_type += getFieldType(method_arg);
 
             }
 
@@ -376,31 +380,43 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     private String dealWithBinaryOp(JmmNode jmmNode, String method){
 
-        String s = "";
-        int i = 0;
-
-        JmmNode child;
-        for (i = 0; i < jmmNode.getNumChildren(); i++){
-            child = jmmNode.getJmmChild(i);
-
+        for (int i = 0; i < jmmNode.getNumChildren(); i++){
+            JmmNode child = jmmNode.getJmmChild(i);
             if (Objects.equals(child.getKind(), "BinaryOp")){
                 dealWithBinaryOp(child, method);
-                i++;
-            }
-
-            Symbol local = symbolTable.getLocalVariables(method).get(localIndex);
-            child = jmmNode.getJmmChild(i);
-            if (local.getName().equals(child.get("value")) && i == jmmNode.getNumChildren()- 1){
-                s += child.get("value") + getType(local.getType());
             }
             else{
-                s += child.get("value") + getType(local.getType()) + " " + getOpType(jmmNode.get("op"));
+                String val_type = findType(child.get("value"), method);
+
+                if (i == jmmNode.getNumChildren()-1){
+                    if (tempIndex > 1){
+                        ollirCode += "\t\tt" + tempIndex + val_type + " :=" + val_type + " ";
+                        tempIndex--;
+                        ollirCode += "t" + tempIndex + val_type + " " + child.getJmmParent().get("op") + val_type + " ";
+                    }
+                    ollirCode+= child.get("value") + val_type + ";\n";
+                    tempIndex++;
+                }
+                else{
+                    if (Objects.equals(child.getJmmParent().getKind(), "BinaryOp")){
+                        String op_type = getOptype(jmmNode.get("op"));
+                        ollirCode += "\t\tt" + tempIndex + op_type + " :=" + op_type + " ";
+                        if (tempIndex == 1){
+                            ollirCode += child.get("value") + val_type + " "+ child.getJmmParent().get("op") + val_type + " ";
+                        }
+
+                        else{
+                            tempIndex--;
+                            ollirCode += "t" + tempIndex + val_type + " " + child.getJmmParent().get("op") + val_type + " ";
+                            tempIndex++;
+                        }
+                    }
+
+                }
             }
-            localIndex++;
-
-
         }
-        return s;
+
+        return "";
     }
 
 }

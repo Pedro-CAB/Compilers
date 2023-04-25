@@ -1,10 +1,19 @@
-class MyClass{
-    int b;
-    public int teste(){
-        return 3;
+import io;
+
+class CompileMethodInvocation {
+
+    public static void main(String[] args) {
+
     }
 
-    public int yi(){
-       b.teste();
+    public int foo() {
+        int a;
+        int b;
+        int c;
+        a = 1;
+        b = 2;
+        c = 3;
+
+        return a+b+c;
     }
 }
