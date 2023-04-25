@@ -146,8 +146,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         for (Symbol field : symbolTable.getFields()){
 
-
-
             ollirCode += "\t.field private " + field.getName();
 
             String type = getType(field.getType());
@@ -286,13 +284,19 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         Symbol local_var = symbolTable.getLocalVariables(s).get(localIndex);
 
+        for (JmmNode child : jmmNode.getChildren()){
+            if (Objects.equals(child.getKind(), "BinaryOp")){
+                dealWithBinaryOp(child, s);
+                String t = getType(local_var.getType());
+                ollirCode += "\t\t" + local_var.getName() + t + " :=" + t+ " t" + tempIndex + t + ";\n";
+                return "";
+            }
+        }
 
         ollirCode += "\t\t" + local_var.getName();
         String type;
 
         type = getType(local_var.getType());
-
-
 
         if (type.equals(".i32")){
             String val = jmmNode.getJmmChild(0).get("value");

@@ -10,10 +10,11 @@ class CompileMethodInvocation {
         int a;
         int b;
         int c;
+        int d;
         a = 1;
         b = 2;
         c = 3;
-
-        return a+b+c;
+        d = a+b+c;
+        return d;
     }
 }
