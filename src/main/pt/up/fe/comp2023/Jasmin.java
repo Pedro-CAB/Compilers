@@ -5,11 +5,11 @@ import pt.up.fe.comp.jmm.jasmin.JasminBackend;
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 
-import javax.swing.text.AbstractDocument;
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
-import java.util.concurrent.LinkedTransferQueue;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,7 +25,7 @@ public class Jasmin implements JasminBackend {
         classUnit = ollirResult.getOllirClass();
         if (classUnit == null) return null;
 
-        StringBuilder jasminCode = new StringBuilder();
+        StringBuilder jasminCode = new StringBuilder("\n");
         stackLimit = 0;
         currentStack = 0;
         numCond = 0;
@@ -78,25 +78,32 @@ public class Jasmin implements JasminBackend {
                 if (i != (params.size() - 1)) jasminCode.append(";");
             }
             jasminCode.append(")").append(getType(method.getReturnType()));
+            StringBuilder methodInstructions = new StringBuilder();
             for (Instruction instruction : method.getInstructions()) {
                 vars = method.getVarTable();
-                jasminCode.append(dealWithInstruction(instruction, method.getLabels(instruction), method.getReturnType(), false));
+                methodInstructions.append(dealWithInstruction(instruction, method.getLabels(instruction), method.getReturnType(), false));
             }
+            jasminCode.append("\n\t.limit stack ").append(stackLimit).append("\n");
+            jasminCode.append("\t.limit locals ").append(method.getVarTable().size()).append(method.getVarTable().containsKey("this") || method.isStaticMethod() ? 0 : 1).append("\n");
+            jasminCode.append(methodInstructions);
             jasminCode.append("\n.end method");
         }
 
-        return new JasminResult(jasminCode.toString());
+        JasminResult jasminResult = new JasminResult(jasminCode.toString());
+        File outputDir = new File("test/fixtures/public/testing");
+        jasminResult.compile(outputDir);
+        return new JasminResult(ollirResult, jasminCode.toString(), Collections.emptyList());
     }
 
     private String dealWithInstruction(Instruction instruction, List<String> labels, Type returnType, Boolean assign) {
-        StringBuilder s = new StringBuilder("\n\t");
+        StringBuilder s = new StringBuilder("\n");
 
         for (String label : labels) {
             s.append(label).append(":\n");
         }
 
         switch (instruction.getInstType()) {
-            case ASSIGN -> s.append(dealWithAssign((AssignInstruction) instruction));
+            case ASSIGN -> s.append(dealWithAssign((AssignInstruction) instruction, labels, returnType, assign));
             case CALL -> s.append(dealWithCall((CallInstruction) instruction, returnType, assign));
             case GOTO -> s.append(dealWithGoto((GotoInstruction) instruction));
             case BRANCH -> s.append(dealWithBranch((CondBranchInstruction) instruction, labels, returnType, assign));
@@ -105,13 +112,12 @@ public class Jasmin implements JasminBackend {
             case GETFIELD -> s.append(dealWithGetField((GetFieldInstruction) instruction));
             case UNARYOPER -> s.append(dealWithUnaryOp((UnaryOpInstruction) instruction));
             case BINARYOPER -> s.append(dealWithBinaryOp((BinaryOpInstruction) instruction));
-            case NOPER -> {
-            }
+            case NOPER -> s.append(dealWithNoper(instruction, labels, returnType, assign));
         }
         return s.toString();
     }
 
-    private String dealWithAssign(AssignInstruction assignInstruction) {
+    private String dealWithAssign(AssignInstruction assignInstruction, List<String> labels, Type returnType, Boolean assign) {
         StringBuilder s = new StringBuilder();
         Operand op = (Operand) assignInstruction.getDest();
 
@@ -121,7 +127,7 @@ public class Jasmin implements JasminBackend {
             else{
                 Descriptor d;
                 if((d = vars.get(arrayOp.getName())) != null) s.append("\taload ").append(d.getVirtualReg()).append("\n\t");
-                else s.append("\taload -1\n\t");
+                else s.append("\taload_1\n\t");
                 s.append("\n");
                 if(!arrayOp.getIndexOperands().isEmpty()) s.append(load(arrayOp.getIndexOperands().get(0)));
                 currentStack+=1;
@@ -133,7 +139,7 @@ public class Jasmin implements JasminBackend {
         }
 
         String rhs = checkIINC(op, assignInstruction.getRhs());
-        if(rhs.equals("")) s.append(assignInstruction.getRhs()).append(store(op));
+        if(rhs.equals("")) s.append(dealWithInstruction(assignInstruction.getRhs(), labels, returnType, assign)).append(store(op));
         else s.append(rhs);
 
         return s.toString();
@@ -312,23 +318,30 @@ public class Jasmin implements JasminBackend {
             return "";
         }
 
+        String returnType = "";
+        switch (returnInstruction.getOperand().getType().getTypeOfElement()) {
+            case INT32, BOOLEAN -> returnType = "i";
+            case STRING -> returnType = "Ljava/lang/String;";
+            case ARRAYREF, OBJECTREF -> returnType = "a";
+        }
+        String s = "\t" + load(returnInstruction.getOperand()) + returnType + "return\n";
+
         stackLimit = Math.max(stackLimit, currentStack);
         currentStack--;
 
-        return "\t" + load(returnInstruction.getOperand()) +
-                getType(returnInstruction.getOperand().getType()) +
-                "return\n";
+        return s;
     }
 
     private String dealWithPutField(PutFieldInstruction putFieldInstruction) {
         StringBuilder s = new StringBuilder();
 
-        Operand op1 = (Operand) putFieldInstruction.getFirstOperand();
+        Element e1 = putFieldInstruction.getFirstOperand();
         Element e2 = putFieldInstruction.getSecondOperand();
-        Operand op3 = (Operand) putFieldInstruction.getThirdOperand();
+        Element e3 = putFieldInstruction.getThirdOperand();
+        Operand op1 = (Operand) e1;
 
         s.append("\t").append(load(op1));
-        s.append("\t").append(load(op3));
+        s.append("\t").append(load(e3));
 
         s.append("\tputfield ");
         String str;
@@ -345,7 +358,7 @@ public class Jasmin implements JasminBackend {
         else{
             s.append(getClassFullName(op1.getName())).append("/").append(str);
         }
-        s.append(" ").append(getType(op3.getType())).append("\n");
+        s.append(" ").append(getType(e3.getType())).append("\n");
 
         stackLimit = Math.max(stackLimit, currentStack);
         currentStack-=2;
@@ -403,6 +416,27 @@ public class Jasmin implements JasminBackend {
         return s.toString();
     }
 
+    private String dealWithNoper(Instruction instruction, List<String> labels, Type returnType, Boolean assign) {
+        if(instruction instanceof SingleOpInstruction singleOpInstruction) return dealWithSingleOp(singleOpInstruction);
+        if(instruction instanceof SingleOpCondInstruction singleOpInstruction) return dealWithSingleCondOp(singleOpInstruction, labels, returnType, assign);
+        return "";
+    }
+
+    private String dealWithSingleOp(SingleOpInstruction singleOpInstruction) {
+        return "\t" + load(singleOpInstruction.getSingleOperand());
+    }
+
+    private String dealWithSingleCondOp(SingleOpCondInstruction singleOpInstruction, List<String> labels, Type returnType, Boolean assign) {
+
+        String s = dealWithInstruction(singleOpInstruction.getCondition(), labels, returnType, assign) +
+                "\tifne " + singleOpInstruction.getLabel() + " \n";
+
+        stackLimit = Math.max(stackLimit, currentStack);
+        currentStack--;
+
+        return s;
+    }
+
     private String dealWithBinaryOp(BinaryOpInstruction opInstruction) {
         StringBuilder s = new StringBuilder();
 
@@ -418,18 +452,44 @@ public class Jasmin implements JasminBackend {
             case SHR -> {}
             case SHL -> {}
             case SHRR -> {}
-            case XOR -> {}
-            case AND -> {}
-            case OR -> {}
-            case LTH -> {}
-            case GTH -> {}
-            case EQ -> {}
-            case NEQ -> {}
-            case LTE -> {}
-            case GTE -> {}
-            case ANDB -> {}
-            case ORB -> {}
-            case NOTB -> {}
+            case XOR -> {
+                s.append(load(leftOp));
+                s.append(load(rightOp));
+                s.append("\tixor\n");
+                stackLimit = Math.max(stackLimit, currentStack);
+                currentStack--;
+            }
+            case AND -> {
+                s.append(load(leftOp));
+                s.append(load(rightOp));
+                s.append("\tiand\n");
+                stackLimit = Math.max(stackLimit, currentStack);
+                currentStack--;
+            }
+            case OR -> {
+                s.append(load(leftOp));
+                s.append(load(rightOp));
+                s.append("\tior\n");
+                stackLimit = Math.max(stackLimit, currentStack);
+                currentStack--;
+            }
+            case LTH -> s.append(getCond("lt", leftOp, rightOp));
+            case GTH -> s.append(getCond("gt", leftOp, rightOp));
+            case EQ -> s.append(getCond("eq", leftOp, rightOp));
+            case NEQ -> s.append(getCond("ne", leftOp, rightOp));
+            case LTE -> s.append(getCond("le", leftOp, rightOp));
+            case GTE -> s.append(getCond("ge", leftOp, rightOp));
+            case ANDB -> s.append(getAndOr("and", leftOp, rightOp));
+            case ORB -> s.append(getAndOr("or", leftOp, rightOp));
+            case NOTB -> {
+                s.append("\tif_ne TRUE").append(numCond).append("\n");
+                s.append("\ticonst_1\n");
+                s.append("\tgoto FALSE").append(numCond).append("\n");
+                s.append("TRUE").append(numCond).append(":\n");
+                s.append("\ticonst_0");
+                s.append("FALSE").append(numCond).append(":\n");
+                numCond++;
+            }
             case NOT -> {}
         }
         return s.toString();
@@ -481,7 +541,7 @@ public class Jasmin implements JasminBackend {
         return "";
     }
 
-    private String getArithmetic(String instruction, Element leftOp, Element rightOp){
+    private String getArithmetic(String instruction, Element leftOp, Element rightOp) {
         StringBuilder s = new StringBuilder();
 
         String exception;
@@ -518,7 +578,91 @@ public class Jasmin implements JasminBackend {
         return s.toString();
     }
 
-    private String checkMulException(Element leftOp, Element rightOp){
+    private String getCond(String instruction, Element leftOp, Element rightOp) {
+        StringBuilder s = new StringBuilder();
+        LiteralElement literalElement = null;
+        Operand operand = null;
+        String prefix = "_icmp";
+
+        if(leftOp.isLiteral() && rightOp.isLiteral()) {
+            currentStack++;
+            switch (instruction){
+                case "eq", "ne", "and", "or" -> {
+                    return bitwise(instruction, ((LiteralElement) leftOp).getLiteral(), ((LiteralElement) rightOp).getLiteral());
+                }
+                case "lt", "le", "gt", "ge" -> {
+                    return compare(instruction, ((LiteralElement) leftOp).getLiteral(), ((LiteralElement) rightOp).getLiteral());
+                }
+            }
+        }
+        else if(leftOp.isLiteral() && !rightOp.isLiteral()) {
+            literalElement = (LiteralElement) leftOp;
+            operand = (Operand) rightOp;
+        }
+        else if(!leftOp.isLiteral() && rightOp.isLiteral()) {
+            literalElement = (LiteralElement) rightOp;
+            operand = (Operand) leftOp;
+        }
+
+        if(literalElement != null && literalElement.getLiteral().equals("0")) {
+            prefix = "";
+        }
+
+        if(prefix.equals("")) {
+            s.append("\t").append(load(operand));
+            stackLimit = Math.max(stackLimit, currentStack);
+            currentStack--;
+        }
+        else {
+            s.append("\t").append(load(leftOp));
+            s.append("\t").append(load(rightOp));
+            stackLimit = Math.max(stackLimit, currentStack);
+            currentStack -= 2;
+        }
+
+        s.append("\t" + "if").append(prefix).append(instruction).append(" FALSE").append(numCond).append("\n");
+        s.append("\ticonst_0\n");
+        s.append("\tgoto TRUE").append(numCond).append("\n");
+        s.append("FALSE").append(numCond).append(":\n");
+        s.append("\ticonst_1\n");
+        s.append("TRUE").append(numCond).append(":\n");
+        currentStack++;
+        numCond++;
+
+        return s.toString();
+    }
+
+    private String getAndOr(String instruction, Element leftOp, Element rightOp) {
+        var s = new StringBuilder();
+        LiteralElement literal = null;
+        String result = null;
+
+        if(leftOp.isLiteral() && rightOp.isLiteral()) return getCond(instruction, leftOp, rightOp);
+
+        if(leftOp.isLiteral() && !rightOp.isLiteral()) literal = (LiteralElement) leftOp;
+        else if(!leftOp.isLiteral() && rightOp.isLiteral()) literal = (LiteralElement) rightOp;
+
+        if(literal != null && instruction.equals("and") && literal.getLiteral().equals("0")) return "\ticonst_0\n";
+        if(literal != null && instruction.equals("or") && literal.getLiteral().equals("1")) return "\ticonst_1\n";
+
+        s.append("\t").append(load(leftOp));
+        s.append("\tifeq" + " FALSE").append(numCond).append("\n");
+        stackLimit = Math.max(stackLimit, currentStack);
+        currentStack--;
+        s.append("\t").append(load(rightOp));
+        s.append("\tifeq" + " FALSE").append(numCond).append("\n");
+        stackLimit = Math.max(stackLimit, currentStack);
+        s.append("\ticonst_1\n");
+        s.append("\tgoto TRUE").append(numCond).append("\n");
+        s.append("FALSE").append(numCond).append(":\n");
+        s.append("\ticonst_0\n");
+        s.append("TRUE").append(numCond).append(":\n");
+        numCond++;
+
+        return s.toString();
+    }
+
+    private String checkMulException(Element leftOp, Element rightOp) {
         int num;
         LiteralElement literal = null;
         Element element = null;
@@ -549,7 +693,7 @@ public class Jasmin implements JasminBackend {
         return null;
     }
 
-    private String checkDivException(Element leftOp, Element rightOp){
+    private String checkDivException(Element leftOp, Element rightOp) {
         int num;
 
         if(rightOp.isLiteral() && isPowerOfTwo((num = Integer.parseInt(((LiteralElement) rightOp).getLiteral())))){
@@ -560,14 +704,38 @@ public class Jasmin implements JasminBackend {
         return null;
     }
 
-    private Boolean isPowerOfTwo(int n){
+    private String bitwise(String instruction, String leftOp, String rightOp) {
+        boolean bool1 = leftOp.equals("1");
+        boolean bool2 = rightOp.equals("1");
+
+        if(instruction.equals("eq") && bool1 == bool2) return "\ticonst_1\n";
+        if(instruction.equals("ne") && bool1 != bool2) return "\ticonst_1\n";
+        if(instruction.equals("and") && (bool1 && bool2)) return "\ticonst_1\n";
+        if(instruction.equals("or") && (bool1 || bool2)) return "\ticonst_1\n";
+
+        return "\ticonst_0\n";
+    }
+
+    private String compare(String instruction, String leftOp, String rightOp) {
+        int int1 = Integer.parseInt(leftOp);
+        int int2 = Integer.parseInt(rightOp);
+
+        if(instruction.equals("lt") && int1 < int2) return "\ticonst_1\n";
+        if(instruction.equals("le") && int1 <= int2) return "\ticonst_1\n";
+        if(instruction.equals("gt") && int1 > int2) return "\ticonst_1\n";
+        if(instruction.equals("ge") && int1 >= int2) return "\ticonst_1\n";
+
+        return "\ticonst_0\n";
+    }
+
+    private Boolean isPowerOfTwo(int n) {
         while(n % 2 == 0) {
             n = n / 2;
         }
         return n == 1;
     }
 
-    private String load(Element e){
+    private String load(Element e) {
         String s = "";
         int numLoads = 1;
 
@@ -576,7 +744,7 @@ public class Jasmin implements JasminBackend {
             switch (literalElement.getType().getTypeOfElement()){
                 case INT32, BOOLEAN -> {
                     int val = Integer.parseInt(literalElement.getLiteral());
-                    if(val >= 0 && val < 6) s += "iconst_ " + literalElement.getLiteral();
+                    if(val >= 0 && val < 6) s += "iconst_" + literalElement.getLiteral();
                     else if(val >= 0 && val < 128) s += "bipush " + literalElement.getLiteral();
                     else if(val >= 0 && val < 32768) s += "sipush " + literalElement.getLiteral();
                     else s += "ldc " + literalElement.getLiteral();
@@ -595,7 +763,7 @@ public class Jasmin implements JasminBackend {
                 switch (op.getType().getTypeOfElement()){
                     case INT32 -> {
                         if(op instanceof ArrayOperand arrayOp){
-                            s += "aload " + (id < 4 ? '_' : ' ') + id + "\n\t";
+                            s += "aload" + (id < 4 ? '_' : ' ') + id + "\n\t";
                             if(!arrayOp.getIndexOperands().isEmpty()) s += load(arrayOp.getIndexOperands().get(0));
                             s += "iaload";
                             numLoads += 2;
@@ -605,7 +773,7 @@ public class Jasmin implements JasminBackend {
                         }
                     }
                     case BOOLEAN -> s += "iload" + (id < 4 ? '_' : ' ') + id;
-                    case ARRAYREF, OBJECTREF, CLASS, STRING -> s += "aload " + (id < 4 ? '_' : ' ') + id;
+                    case ARRAYREF, OBJECTREF, CLASS, STRING -> s += "aload" + (id < 4 ? '_' : ' ') + id;
                     case THIS -> s += "aload_0";
                 }
             }
@@ -627,7 +795,7 @@ public class Jasmin implements JasminBackend {
         return s;
     }
 
-    private String store(Element e){
+    private String store(Element e) {
         String s = "";
 
         if(e.isLiteral()){
@@ -653,11 +821,11 @@ public class Jasmin implements JasminBackend {
                             s += "\tiastore";
                         }
                         else{
-                            s += "store" + (id < 4 ? "_" : " ") + id;
+                            s += "\tistore" + (id < 4 ? "_" : " ") + id;
                         }
                     }
                     case BOOLEAN -> s += "\tistore" + (id < 4 ? "_" : " ") + id;
-                    case ARRAYREF, OBJECTREF, CLASS, STRING -> s += "astore " + (id < 4 ? '_' : ' ') + id;
+                    case ARRAYREF, OBJECTREF, CLASS, STRING -> s += "\tastore" + (id < 4 ? '_' : ' ') + id;
                     case THIS -> s += "astore_0";
                 }
             }
@@ -678,7 +846,7 @@ public class Jasmin implements JasminBackend {
             case BOOLEAN -> s += "Z";
             case ARRAYREF -> {
                 ArrayType arrayType = (ArrayType) type;
-                s += "[" + getType(new Type(arrayType.getArrayType()));
+                s += "[" + getType(arrayType.getElementType());
             }
             case OBJECTREF -> s += "a";
             case CLASS -> {
@@ -692,10 +860,9 @@ public class Jasmin implements JasminBackend {
         return s;
     }
 
-    private String getClassFullName(String className){
+    private String getClassFullName(String className) {
         for(String imp : classUnit.getImports()){
                 String[] splited = imp.split("\\.");
-                String last;
 
                 if(splited.length == 0 && imp.equals(className)){
                     return imp.replace('.', '/');

@@ -7,6 +7,7 @@ import java.util.Map;
 
 import pt.up.fe.comp.TestUtils;
 import pt.up.fe.comp.jmm.analysis.JmmSemanticsResult;
+import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.comp2023.analysis.Analysis;
@@ -58,6 +59,9 @@ public class Launcher {
         OllirResult ollirResult = new Ollir().toOllir(result);
 
         System.out.println("ollirResult: " + ollirResult.getOllirCode());
+
+        JasminResult jasminResult = new Jasmin().toJasmin(ollirResult);
+        System.out.println("jasminResult:\n" + jasminResult.getReports());
     }
 
     private static Map<String, String> parseArgs(String[] args) {
