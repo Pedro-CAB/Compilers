@@ -406,7 +406,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 }
                 else{
                     String method_sup = child.getJmmParent().getJmmChild(0).get("value");
-                    if (child.getNumChildren() > 1){
+                    if (child.getNumChildren() >= 1){
                         String method_arg = child.getJmmChild(0).getJmmChild(0).get("value");
 
                         String arg_type = findType(child.getJmmChild(0).getJmmChild(0), method);

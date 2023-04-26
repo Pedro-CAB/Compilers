@@ -1,12 +1,18 @@
-import Test.m;
+import io;
 
-class MyClass{
-    public int foo(Test t) {
-            MyClass c = new MyClass();
+class CompileMethodInvocation {
 
-            c.foo(t);
+    public static void main(String[] args) {
 
-            t.m();
-            return 0;
+    }
+
+    public int foo() {
+        int a;
+
+        a = 1;
+
+        io.println(a);
+
+        return 0;
     }
 }
