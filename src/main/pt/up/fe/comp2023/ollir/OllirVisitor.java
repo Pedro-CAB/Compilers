@@ -101,8 +101,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         String val = node.get("value");
 
-        String res = "";
-
         switch (node.getKind()) {
             case "Integer" -> {
                 return ".i32";
@@ -120,13 +118,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
-        res += getLocalType(val, method);
-
-        if (res.isEmpty()){
-            return getParamType(val, method) + getFieldType(val);
-        }
-
-        return res;
+        return getParamType(val, method) + getFieldType(val) + getLocalType(val, method);
     }
 
 
@@ -432,7 +424,16 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
             method_sup = jmmNode.getJmmChild(0).get("value");
 
-            arg_type += findType(temp.getJmmChild(0), method);
+            for (Symbol symbol : symbolTable.getLocalVariables(method)){
+                if (Objects.equals(method_arg, symbol.getName())){
+                    arg_type += getType(symbol.getType());
+                }
+            }
+            if (arg_type.equals("")){
+                arg_type += getParamType(method_arg, method);
+                arg_type += getFieldType(method_arg);
+
+            }
 
             if (arg_type.equals("") && Objects.equals(temp.getJmmChild(0).getKind(), "Integer")) {
                 arg_type += ".i32";
