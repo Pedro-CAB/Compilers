@@ -49,6 +49,7 @@ public class Launcher {
 
         // ... add remaining stages
         Analysis analysis = new Analysis();
+        Jasmin jasmin = new Jasmin();
 
         System.out.println("\n\nPrinting Symbol Table\n");
 
