@@ -59,7 +59,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         } else if ("string".equals(type.getName())) {
             ollir.append(".string");
         } else if ("void".equals(type.getName())){
-            ollir.append(".V").append(type.getName());
+            ollir.append(".V");
         }
         else{
             ollir.append(".").append(type.getName());
