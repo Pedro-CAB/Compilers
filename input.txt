@@ -1,4 +1,4 @@
-import Test;
+import Test.m;
 
 class MyClass{
     public int foo(Test t) {
