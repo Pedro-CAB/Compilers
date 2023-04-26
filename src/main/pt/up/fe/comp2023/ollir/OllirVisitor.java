@@ -97,8 +97,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         String val = node.get("value");
 
-        String res = "";
-
         switch (node.getKind()) {
             case "Integer" -> {
                 return ".i32";
@@ -116,13 +114,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
-        res += getLocalType(val, method);
-
-        if (res.isEmpty()){
-            return getParamType(val, method) + getFieldType(val);
-        }
-
-        return res;
+        return getParamType(val, method) + getFieldType(val) + getLocalType(val, method);
     }
 
 
@@ -249,7 +241,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                     if (Objects.equals(c.getKind(), "Return")){
                         dealWithReturn(c, method);
                     }
-                    else if (Objects.equals(c.getKind(), "Assignment") || Objects.equals(c.getKind(), "Declaration"))
+                    else if (Objects.equals(c.getKind(), "Assignment"))
                         dealWithAssignments(c, method);
                     else if (Objects.equals(c.getKind(), "MethodCalls"))
                         dealWithMethodInvocation(c, method);
@@ -328,20 +320,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         switch (type) {
             case ".i32" -> {
                 String val = jmmNode.getJmmChild(0).get("value");
-
-                /*
-                if (!Objects.equals(jmmNode.getJmmChild(0).getKind(), "MethodCalls")){
-                    val = jmmNode.getJmmChild(0).get("value");
-                }
-
-                else{
-                    JmmNode child = jmmNode.getJmmChild(0);
-                    for (JmmNode c : child.getChildren()){
-                        if (Objects.equals(c.getKind(), "MethodCalls")){
-                            val = c.getJmmChild(0).get("value");
-                        }
-                    }
-                }*/
                 ollirCode += type + " :=" + type + " " + val + type + ";\n";
             }
             case ".bool" -> ollirCode += type + " :=" + type + " 0.bool;\n";
@@ -382,14 +360,23 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         String method_sup;
 
         String arg_type = "";
-        if (method_aux.getNumChildren() > 1) {
+        if (method_aux.getNumChildren() > 0) {
 
             JmmNode temp = method_aux.getJmmChild(0);
             method_arg = temp.getJmmChild(0).get("value");
 
             method_sup = jmmNode.getJmmChild(0).get("value");
 
-            arg_type += findType(temp.getJmmChild(0), method);
+            for (Symbol symbol : symbolTable.getLocalVariables(method)){
+                if (Objects.equals(method_arg, symbol.getName())){
+                    arg_type += getType(symbol.getType());
+                }
+            }
+            if (arg_type.equals("")){
+                arg_type += getParamType(method_arg, method);
+                arg_type += getFieldType(method_arg);
+
+            }
 
             if (arg_type.equals("") && Objects.equals(temp.getJmmChild(0).getKind(), "Integer")){
                 arg_type += ".i32";
@@ -402,22 +389,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         else if (isInvokeVirtual(method_name)){
 
             if (symbolTable.getParameters(method_name).size() > 0){
-
-                for (JmmNode child : jmmNode.getChildren()){
-                    if (Objects.equals(child.getKind(), "MethodCall")){
-                        JmmNode c = child.getJmmChild(0);
-
-                        for (JmmNode temp : c.getChildren()){
-                            if (Objects.equals(temp.getKind(), "Identifier")){
-                                method_arg = temp.get("value");
-                                arg_type = findType(temp, method);
-                            }
-                        }
-
-                    }
-                }
-
-
                 ollirCode += "\t\tinvokevirtual("+ object + object_type + ", \"" + method_name + "\", " +
                         method_arg + arg_type + ")" + getType(
                         symbolTable.getReturnType(method_name)) + ";\n";
