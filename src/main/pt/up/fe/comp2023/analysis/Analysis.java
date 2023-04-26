@@ -162,6 +162,12 @@ public class Analysis implements JmmAnalysis {
         }
     }
 
+    /**
+     * Checks for errors inside a Node of kind BinaryOp
+     * @param reports List of reports registered so far in the analysis
+     * @param node BinaryOp node to be checked
+     * @return Updated list of reports with possible new errors detected inside this node
+     */
     private List<Report> visitBinaryOp(List<Report> reports, JmmNode node) {
         System.out.println("Called visitBinaryOp");
         String operator = node.get("op");
@@ -268,6 +274,12 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
+    /**
+     * Checks a JmmNode of Kind Return for errors
+     * @param reports List of Reports regstered so far in the analysis
+     * @param root Return Node to be checked
+     * @return Updated List of Reports with possible new errors detected inside this node
+     */
     private List<Report> visitReturn(List<Report> reports, JmmNode root) {
         JmmNode child = root.getChildren().get(0);
         updateRelevantVars();
@@ -314,17 +326,6 @@ public class Analysis implements JmmAnalysis {
                 }
                 reports.addAll(visitMethodCalls(reports, child));
                 break;
-                /*
-                String methodReturnType = getMethodCallType(child);
-                System.out.println(methodReturnType + "==" + returnType);
-                String methodCallType = getMethodCallType(child);
-                if (!Objects.equals(methodReturnType, returnType) && methodCallType != null) {
-                    String methodCallName = getMethodCallName(child);
-                    reports.add(createReport(child, "Return type of " + methodName + " is '" + returnType + "' but " + methodCallName + " returns '" + methodReturnType + "'."));
-                }
-                reports.addAll(visitMethodCalls(reports, child));
-                break;
-                 */
             case "ArrayAcess":
                 reports.addAll(visitArrayAcess(reports, child));
             case "Self":
@@ -339,6 +340,11 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
+    /**
+     * Obtains return type of a method declared inside the class
+     * @param node MethodCalls node
+     * @return null if method is not of the current class, String representing return type otherwise
+     */
     private String getMethodCallType(JmmNode node) {
         String methodClassName = getVarType(node.getChildren().get(0).get("value")); //class over which the method is called
         if (Objects.equals(table.getClassName(), methodClassName)) { //In case it is the class where the method is called
@@ -346,10 +352,21 @@ public class Analysis implements JmmAnalysis {
         } else return null;
     }
 
+    /**
+     * Get a Called Method Name
+     * @param node MethodCalls node
+     * @return String with the Method Name
+     */
     private String getMethodCallName(JmmNode node) {
         return getVarType(node.getChildren().get(0).get("value"));
     }
 
+    /**
+     * Visits a MethodCalls node and checks it for errors
+     * @param reports List of Reports of previously detected errors
+     * @param root Node MethodCalls to check
+     * @return Updated List of Reports
+     */
     private List<Report> visitMethodCalls(List<Report> reports, JmmNode root) {
         System.out.println("called visitMethodCalls");
         JmmNode child = root.getJmmChild(0);
@@ -405,6 +422,11 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
+    /**
+     * Returns type of an array element
+     * @param root ArrayAcess Node
+     * @return Type of Array Element returned from Access
+     */
     private String getArrayAccessReturn(JmmNode root) {
         JmmNode arrayChild = root.getJmmChild(0);
         for (Symbol var : vars) {
@@ -415,6 +437,12 @@ public class Analysis implements JmmAnalysis {
         return null;
     }
 
+    /**
+     * Visits Assignment Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root Assignement Node
+     * @return Updated List of Reports
+     */
     private List<Report> visitAssignment(List<Report> reports, JmmNode root) {
         System.out.println("Called visitAssignment");
         JmmNode child = root.getChildren().get(0);
@@ -498,7 +526,12 @@ public class Analysis implements JmmAnalysis {
         }
         return reports;
     }
-
+    /**
+     * Visits Identifier Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root Identifier Node
+     * @return Updated List of Reports
+     */
     private List<Report> visitIdentifier(List<Report> reports, JmmNode root, String varType) {
         String idType = getVarType(root.get("value"));
         if (idType == null) { //Checks if variable was previously declared
@@ -520,7 +553,12 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
-
+    /**
+     * Visits Declaration Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root Declaration Node
+     * @return Updated List of Reports
+     */
     private List<Report> visitDeclaration(List<Report> reports, JmmNode root){
         String varName = root.get("var");
         updateRelevantVars();
@@ -530,7 +568,12 @@ public class Analysis implements JmmAnalysis {
         }
         return reports;
     }
-
+    /**
+     * Visits MethodBody Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root MethodBody Node
+     * @return Updated List of Reports
+     */
     private List<Report> visitMethodBody(List<Report> reports, JmmNode node){
         updateRelevantVars();
         for(JmmNode child : node.getChildren()){
@@ -563,7 +606,12 @@ public class Analysis implements JmmAnalysis {
         }
         return reports;
     }
-
+    /**
+     * Visits While Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root While Node
+     * @return Updated List of Reports
+     */
     private Collection<? extends Report> visitWhile(List<Report> reports, JmmNode root) {
         JmmNode condition = root.getJmmChild(0);
         updateRelevantVars();
@@ -578,7 +626,12 @@ public class Analysis implements JmmAnalysis {
         reports.addAll(visitMethodBody(reports,root.getJmmChild(1)));
         return reports;
     }
-
+    /**
+     * Visits ArrayAcess Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root ArrayAcess Node
+     * @return Updated List of Reports
+     */
     private List<Report> visitArrayAcess(List<Report> reports, JmmNode root){
         updateRelevantVars();
         JmmNode varChild = root.getChildren().get(0);
@@ -606,7 +659,12 @@ public class Analysis implements JmmAnalysis {
         }
         return reports;
     }
-
+    /**
+     * Visits ExprStmt Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root ExprStmt Node
+     * @return Updated List of Reports
+     */
     private List<Report> visitExprStmt(List<Report> reports, JmmNode root){
         System.out.println("called visitExprSmt");
         System.out.println(root.getChildren().get(0).getKind());
@@ -623,7 +681,12 @@ public class Analysis implements JmmAnalysis {
         }
         return reports;
     }
-
+    /**
+     * Visits Method Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root Method Node
+     * @return Updated List of Reports
+     */
     private List<Report> visitMethod(List<Report> reports, JmmNode root){
         System.out.println("    Called visitMethod \n");
         Queue<JmmNode> queue = new LinkedList<>();
@@ -670,7 +733,12 @@ public class Analysis implements JmmAnalysis {
         }
         return reports;
     }
-
+    /**
+     * Visits IfElse Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root IfElse Node
+     * @return Updated List of Reports
+     */
     private List<Report> visitIfElse(List<Report> reports, JmmNode node) {
         JmmNode condition = node.getJmmChild(0), ifNode = node.getJmmChild(1), elseNode = null;
         if(node.getChildren().size() == 3) elseNode = node.getJmmChild(2);
@@ -691,7 +759,12 @@ public class Analysis implements JmmAnalysis {
         if (node.getChildren().size() == 3) reports.addAll(visitMethodBody(reports,elseNode));
         return reports;
     }
-
+    /**
+     * Visits Program Node and checks for errors
+     * @param reports List of Reports of previosuly found errors
+     * @param root Program Node
+     * @return Updated List of Reports
+     */
     private List<Report> visitProgram(List<Report> reports, JmmNode node){
         Queue<JmmNode> queue = new LinkedList<>();
         queue.add(node);
@@ -720,6 +793,11 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
 
+    /**
+     * Detects Semantic Errors on the Parsed Code
+     * @param parserResult Parsed Code
+     * @return Results of Semantic Analysis
+     */
     public JmmSemanticsResult semanticAnalysis(JmmParserResult parserResult){
 
         table = new Table();
