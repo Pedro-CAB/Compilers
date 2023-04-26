@@ -1,20 +1,12 @@
-class IncompatibleReturn {
+class MyClass {
 
     public static void main(String[] args) {
 
     }
 
-    public int foo(int a) {
-        return a + 1;
-    }
-
-    public boolean bar() {
-        IncompatibleReturn a;
-        int b;
-
-        a = new IncompatibleReturn();
-        b = 0;
-
-        return a.foo(b);
+    public int foo() {
+        MyClass d = new MyClass();
+        int a = 6 + 8 + 7 + d + 6 + true;
+        return a;
     }
 }
