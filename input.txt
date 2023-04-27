@@ -1,13 +1,11 @@
-import io;
+import pao.a;
 
-class CompileMethodInvocation {
+class MyA{
+    int c;
+    public MyA f(MyB b){
 
+       t.a(b,1);
 
-    public static void main(String[] args) {
-        int a;
-
-        a = 3;
-
+       return b;
     }
-
 }
