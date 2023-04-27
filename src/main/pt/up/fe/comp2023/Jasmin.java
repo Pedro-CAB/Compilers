@@ -40,7 +40,8 @@ public class Jasmin implements JasminBackend {
 
         // Add superclass
         jasminCode.append("\n.super ");
-        if (classUnit.getSuperClass() != null) jasminCode.append(getClassFullName(classUnit.getSuperClass())).append("\n");
+        if (classUnit.getSuperClass() != null)
+            jasminCode.append(getClassFullName(classUnit.getSuperClass())).append("\n");
         else jasminCode.append("java/lang/Object\n");
 
         // Add fields
@@ -60,34 +61,41 @@ public class Jasmin implements JasminBackend {
 
         // Add methods
         for (Method method : classUnit.getMethods()) {
-            jasminCode.append("\n\n.method ");
-            switch (method.getMethodAccessModifier()) {
-                case PUBLIC -> jasminCode.append("public ");
-                case PRIVATE -> jasminCode.append("private ");
-                case PROTECTED -> jasminCode.append("protected ");
+            if (method.isConstructMethod()) {
+                jasminCode.append("\n.method public <init>()V\n\taload_0\n\tinvokenonvirtual ");
+                if (classUnit.getSuperClass() != null) jasminCode.append(getClassFullName(classUnit.getSuperClass()));
+                else jasminCode.append("java/lang/Object");
+                jasminCode.append("/<init>()V\n\treturn\n.end method\n");
+            } else {
+                jasminCode.append("\n.method ");
+                switch (method.getMethodAccessModifier()) {
+                    case PUBLIC -> jasminCode.append("public ");
+                    case PRIVATE -> jasminCode.append("private ");
+                    case PROTECTED -> jasminCode.append("protected ");
+                }
+                if (method.isStaticMethod()) jasminCode.append("static ");
+                if (method.isFinalMethod()) jasminCode.append("final ");
+                if (method.isConstructMethod()) jasminCode.append("<init>(");
+                jasminCode.append(method.getMethodName()).append("(");
+                ArrayList<Element> params = method.getParams();
+                for (int i = 0; i < params.size(); i++) {
+                    jasminCode.append(getType(params.get(i).getType()));
+                    if (i != (params.size() - 1)) jasminCode.append(";");
+                }
+                jasminCode.append(")").append(getType(method.getReturnType()));
+                StringBuilder methodInstructions = new StringBuilder();
+                int numInstructions = method.getInstructions().size();
+                for (int i = 0; i < numInstructions; i++) {
+                    if (i < numInstructions - 1) method.getInstr(i).addSucc(method.getInstr(i + 1));
+                    Instruction instruction = method.getInstr(i);
+                    vars = method.getVarTable();
+                    methodInstructions.append(dealWithInstruction(instruction, method.getLabels(instruction), method.getReturnType(), false));
+                }
+                jasminCode.append("\n\t.limit stack ").append(stackLimit).append("\n");
+                jasminCode.append("\t.limit locals ").append(method.getVarTable().size()).append(method.getVarTable().containsKey("this") || method.isStaticMethod() ? 0 : 1).append("\n");
+                jasminCode.append(methodInstructions);
+                jasminCode.append("\n.end method\n");
             }
-            if (method.isStaticMethod()) jasminCode.append("static ");
-            if (method.isFinalMethod()) jasminCode.append("final ");
-            if (method.isConstructMethod()) jasminCode.append("<init>(");
-            else jasminCode.append(method.getMethodName()).append("(");
-            ArrayList<Element> params = method.getParams();
-            for (int i = 0; i < params.size(); i++) {
-                jasminCode.append(getType(params.get(i).getType()));
-                if (i != (params.size() - 1)) jasminCode.append(";");
-            }
-            jasminCode.append(")").append(getType(method.getReturnType()));
-            StringBuilder methodInstructions = new StringBuilder();
-            int numInstructions = method.getInstructions().size();
-            for (int i = 0; i < numInstructions; i++) {
-                if(i < numInstructions-1) method.getInstr(i).addSucc(method.getInstr(i+1));
-                Instruction instruction = method.getInstr(i);
-                vars = method.getVarTable();
-                methodInstructions.append(dealWithInstruction(instruction, method.getLabels(instruction), method.getReturnType(), false));
-            }
-            jasminCode.append("\n\t.limit stack ").append(stackLimit).append("\n");
-            jasminCode.append("\t.limit locals ").append(method.getVarTable().size()).append(method.getVarTable().containsKey("this") || method.isStaticMethod() ? 0 : 1).append("\n");
-            jasminCode.append(methodInstructions);
-            jasminCode.append("\n.end method");
         }
 
 
@@ -122,14 +130,15 @@ public class Jasmin implements JasminBackend {
 
         if (op.getType().getTypeOfElement() == ElementType.ARRAYREF) {
             ArrayOperand arrayOp = (ArrayOperand) op;
-            if(arrayOp.isParameter()) s.append("\taload ").append(arrayOp.getParamId()).append("\n\t");
-            else{
+            if (arrayOp.isParameter()) s.append("\taload ").append(arrayOp.getParamId()).append("\n\t");
+            else {
                 Descriptor d;
-                if((d = vars.get(arrayOp.getName())) != null) s.append("\taload ").append(d.getVirtualReg()).append("\n\t");
+                if ((d = vars.get(arrayOp.getName())) != null)
+                    s.append("\taload ").append(d.getVirtualReg()).append("\n\t");
                 else s.append("\taload_1\n\t");
                 s.append("\n");
-                if(!arrayOp.getIndexOperands().isEmpty()) s.append(load(arrayOp.getIndexOperands().get(0)));
-                currentStack+=1;
+                if (!arrayOp.getIndexOperands().isEmpty()) s.append(load(arrayOp.getIndexOperands().get(0)));
+                currentStack += 1;
             }
         }
 
@@ -138,7 +147,8 @@ public class Jasmin implements JasminBackend {
         }
 
         String rhs = checkIINC(op, assignInstruction.getRhs());
-        if(rhs.equals("")) s.append(dealWithInstruction(assignInstruction.getRhs(), labels, returnType, assign)).append(store(op));
+        if (rhs.equals(""))
+            s.append(dealWithInstruction(assignInstruction.getRhs(), labels, returnType, assign)).append(store(op));
         else s.append(rhs);
 
         return s.toString();
@@ -147,7 +157,7 @@ public class Jasmin implements JasminBackend {
     private String dealWithCall(CallInstruction callInstruction, Type returnType, Boolean assign) {
         StringBuilder s = new StringBuilder();
 
-        switch (callInstruction.getInvocationType()){
+        switch (callInstruction.getInvocationType()) {
             case invokevirtual -> s.append(dealWithInvokeVirtual(callInstruction, returnType, assign));
             case invokeinterface -> s.append(dealWithInvokeInterface(callInstruction, returnType, assign));
             case invokespecial -> s.append(dealWithInvokeSpecial(callInstruction, assign));
@@ -159,7 +169,7 @@ public class Jasmin implements JasminBackend {
         return s.toString();
     }
 
-    private String dealWithInvokeVirtual(CallInstruction callInstruction, Type returnType, Boolean assign){
+    private String dealWithInvokeVirtual(CallInstruction callInstruction, Type returnType, Boolean assign) {
         StringBuilder s = new StringBuilder();
 
         Operand op = (Operand) callInstruction.getFirstArg();
@@ -168,7 +178,7 @@ public class Jasmin implements JasminBackend {
 
         s.append("\t").append(load(op));
 
-        for(Element e : callInstruction.getListOfOperands()){
+        for (Element e : callInstruction.getListOfOperands()) {
             s.append("\t").append(load(e));
         }
 
@@ -180,11 +190,11 @@ public class Jasmin implements JasminBackend {
         s.append(")").append(getType(callInstruction.getReturnType())).append("\n");
 
         stackLimit = Math.max(stackLimit, currentStack);
-        for(int i = 0; i <= callInstruction.getListOfOperands().size(); i++){
+        for (int i = 0; i <= callInstruction.getListOfOperands().size(); i++) {
             currentStack--;
         }
 
-        if(returnType.getTypeOfElement() != ElementType.VOID && !assign){
+        if (returnType.getTypeOfElement() != ElementType.VOID && !assign) {
             s.append("\tpop\n");
             stackLimit = Math.max(stackLimit, currentStack);
             currentStack--;
@@ -195,7 +205,7 @@ public class Jasmin implements JasminBackend {
         return s.toString();
     }
 
-    private String dealWithInvokeInterface(CallInstruction callInstruction, Type returnType, Boolean assign){
+    private String dealWithInvokeInterface(CallInstruction callInstruction, Type returnType, Boolean assign) {
         StringBuilder s = new StringBuilder();
 
         Operand op = (Operand) callInstruction.getFirstArg();
@@ -204,7 +214,7 @@ public class Jasmin implements JasminBackend {
 
         s.append("\t").append(load(op));
 
-        for(Element e : callInstruction.getListOfOperands()){
+        for (Element e : callInstruction.getListOfOperands()) {
             s.append("\t").append(load(e));
         }
 
@@ -216,11 +226,11 @@ public class Jasmin implements JasminBackend {
         s.append(")").append(getType(callInstruction.getReturnType())).append(" ").append(callInstruction.getListOfOperands().size()).append("\n");
 
         stackLimit = Math.max(stackLimit, currentStack);
-        for(int i = 0; i <= callInstruction.getListOfOperands().size(); i++){
+        for (int i = 0; i <= callInstruction.getListOfOperands().size(); i++) {
             currentStack--;
         }
 
-        if(returnType.getTypeOfElement() != ElementType.VOID && !assign){
+        if (returnType.getTypeOfElement() != ElementType.VOID && !assign) {
             s.append("\tpop\n");
             stackLimit = Math.max(stackLimit, currentStack);
             currentStack--;
@@ -231,7 +241,7 @@ public class Jasmin implements JasminBackend {
         return s.toString();
     }
 
-    private String dealWithInvokeSpecial(CallInstruction callInstruction, Boolean assign){
+    private String dealWithInvokeSpecial(CallInstruction callInstruction, Boolean assign) {
         StringBuilder s = new StringBuilder();
 
         Operand op = (Operand) callInstruction.getFirstArg();
@@ -240,7 +250,7 @@ public class Jasmin implements JasminBackend {
 
         s.append("\t").append(load(op));
 
-        for(Element e : callInstruction.getListOfOperands()){
+        for (Element e : callInstruction.getListOfOperands()) {
             s.append("\t").append(load(e));
         }
 
@@ -252,18 +262,18 @@ public class Jasmin implements JasminBackend {
         s.append(")").append(getType(callInstruction.getReturnType())).append("\n");
 
         stackLimit = Math.max(stackLimit, currentStack);
-        for(int i = 0; i < callInstruction.getListOfOperands().size(); i++){
+        for (int i = 0; i < callInstruction.getListOfOperands().size(); i++) {
             currentStack--;
         }
 
-        if(callInstruction.getReturnType().getTypeOfElement() != ElementType.VOID && !assign){
+        if (callInstruction.getReturnType().getTypeOfElement() != ElementType.VOID && !assign) {
             s.append("\tpop\n");
         }
 
         return s.toString();
     }
 
-    private String dealWithInvokeStatic(CallInstruction callInstruction, Boolean assign){
+    private String dealWithInvokeStatic(CallInstruction callInstruction, Boolean assign) {
         StringBuilder s = new StringBuilder();
 
         Operand op = (Operand) callInstruction.getFirstArg();
@@ -271,12 +281,12 @@ public class Jasmin implements JasminBackend {
         LiteralElement element = (LiteralElement) callInstruction.getSecondArg();
         String method = element.getLiteral().replace("\"", "");
 
-        for(Element e : callInstruction.getListOfOperands()){
+        for (Element e : callInstruction.getListOfOperands()) {
             s.append("\t").append(load(e));
         }
 
         s.append("\tinvokestatic ");
-        if(className == null) s.append("java/lang/Object");
+        if (className == null) s.append("java/lang/Object");
         else s.append(getClassFullName(className));
         s.append("/").append(method).append("(");
 
@@ -287,11 +297,11 @@ public class Jasmin implements JasminBackend {
         s.append(")").append(getType(callInstruction.getReturnType())).append("\n");
 
         stackLimit = Math.max(stackLimit, currentStack);
-        for(int i = 0; i < callInstruction.getListOfOperands().size(); i++){
+        for (int i = 0; i < callInstruction.getListOfOperands().size(); i++) {
             currentStack--;
         }
 
-        if(callInstruction.getReturnType().getTypeOfElement() != ElementType.VOID && !assign){
+        if (callInstruction.getReturnType().getTypeOfElement() != ElementType.VOID && !assign) {
             s.append("\tpop\n");
             stackLimit = Math.max(stackLimit, currentStack);
             currentStack--;
@@ -302,24 +312,24 @@ public class Jasmin implements JasminBackend {
         return s.toString();
     }
 
-    private String dealWithNEW(CallInstruction callInstruction){
+    private String dealWithNEW(CallInstruction callInstruction) {
         StringBuilder s = new StringBuilder();
 
         Operand op = (Operand) callInstruction.getFirstArg();
 
-        for(Element e : callInstruction.getListOfOperands()){
+        for (Element e : callInstruction.getListOfOperands()) {
             s.append("\t").append(load(e));
         }
 
         s.append("\tnew");
-        switch (op.getType().getTypeOfElement()){
+        switch (op.getType().getTypeOfElement()) {
             case CLASS -> s.append("\t").append(op.getName()).append("\n\tdup\n");
             case ARRAYREF -> s.append("array int");
             case OBJECTREF -> s.append("\t").append(op.getName()).append("\n");
         }
 
         stackLimit = Math.max(stackLimit, currentStack);
-        for(int i = 1; i < callInstruction.getListOfOperands().size(); i++){
+        for (int i = 1; i < callInstruction.getListOfOperands().size(); i++) {
             currentStack--;
         }
 
@@ -331,7 +341,7 @@ public class Jasmin implements JasminBackend {
         return "\t" + load(callInstruction.getFirstArg()) + "\tarraylength\n";
     }
 
-    private String dealWithLDC(CallInstruction callInstruction){
+    private String dealWithLDC(CallInstruction callInstruction) {
         return "\t" + load(callInstruction.getFirstArg());
     }
 
@@ -344,7 +354,7 @@ public class Jasmin implements JasminBackend {
     }
 
     private String dealWithReturn(ReturnInstruction returnInstruction) {
-        if(!returnInstruction.hasReturnValue()){
+        if (!returnInstruction.hasReturnValue()) {
             return "";
         }
 
@@ -375,23 +385,21 @@ public class Jasmin implements JasminBackend {
 
         s.append("\tputfield ");
         String str;
-        if(e2.isLiteral()){
+        if (e2.isLiteral()) {
             str = ((LiteralElement) e2).getLiteral();
-        }
-        else{
+        } else {
             Operand op2 = (Operand) e2;
             str = op2.getName();
         }
-        if(op1.getType().getTypeOfElement() == ElementType.THIS){
+        if (op1.getType().getTypeOfElement() == ElementType.THIS) {
             s.append(classUnit.getClassName()).append("/").append(str);
-        }
-        else{
+        } else {
             s.append(getClassFullName(op1.getName())).append("/").append(str);
         }
         s.append(" ").append(getType(e3.getType())).append("\n");
 
         stackLimit = Math.max(stackLimit, currentStack);
-        currentStack-=2;
+        currentStack -= 2;
 
         return s.toString();
     }
@@ -406,17 +414,15 @@ public class Jasmin implements JasminBackend {
 
         s.append("\tgetfield ");
         String str;
-        if(e2.isLiteral()){
+        if (e2.isLiteral()) {
             str = ((LiteralElement) e2).getLiteral();
-        }
-        else{
+        } else {
             Operand op2 = (Operand) e2;
             str = op2.getName();
         }
-        if(op1.getType().getTypeOfElement() == ElementType.THIS){
+        if (op1.getType().getTypeOfElement() == ElementType.THIS) {
             s.append(classUnit.getClassName()).append("/").append(str);
-        }
-        else{
+        } else {
             s.append(getClassFullName(op1.getName())).append("/").append(str);
         }
         s.append(" ").append(getType(getFieldInstruction.getFieldType())).append("\n");
@@ -431,7 +437,7 @@ public class Jasmin implements JasminBackend {
         Operation operation = opInstruction.getOperation();
         s.append("\t").append(load(opInstruction.getOperand()));
 
-        switch (operation.getOpType()){
+        switch (operation.getOpType()) {
             case NOT, NOTB -> {
                 s.append("\tifne TRUE").append(numCond).append("\n");
                 s.append("\riconst_1\n");
@@ -453,7 +459,7 @@ public class Jasmin implements JasminBackend {
         Element leftOp = opInstruction.getLeftOperand();
         Element rightOp = opInstruction.getRightOperand();
 
-        switch (operation.getOpType()){
+        switch (operation.getOpType()) {
             case ADD -> s.append(getArithmetic("iadd", leftOp, rightOp));
             case SUB -> s.append(getArithmetic("isub", leftOp, rightOp));
             case MUL -> s.append(getArithmetic("imul", leftOp, rightOp));
@@ -507,8 +513,10 @@ public class Jasmin implements JasminBackend {
     }
 
     private String dealWithNoper(Instruction instruction, List<String> labels, Type returnType, Boolean assign) {
-        if(instruction instanceof SingleOpInstruction singleOpInstruction) return dealWithSingleOp(singleOpInstruction);
-        if(instruction instanceof SingleOpCondInstruction singleOpInstruction) return dealWithSingleCondOp(singleOpInstruction, labels, returnType, assign);
+        if (instruction instanceof SingleOpInstruction singleOpInstruction)
+            return dealWithSingleOp(singleOpInstruction);
+        if (instruction instanceof SingleOpCondInstruction singleOpInstruction)
+            return dealWithSingleCondOp(singleOpInstruction, labels, returnType, assign);
         return "";
     }
 
@@ -528,38 +536,35 @@ public class Jasmin implements JasminBackend {
     }
 
     private String checkIINC(Operand dest, Instruction instruction) {
-        if(instruction.getInstType() == InstructionType.BINARYOPER) {
+        if (instruction.getInstType() == InstructionType.BINARYOPER) {
             BinaryOpInstruction binaryOpInstruction = (BinaryOpInstruction) instruction;
 
-            if(binaryOpInstruction.getOperation().getOpType() == OperationType.ADD) {
+            if (binaryOpInstruction.getOperation().getOpType() == OperationType.ADD) {
                 LiteralElement literalElement;
                 Operand op;
                 boolean leftOpLiteral = binaryOpInstruction.getLeftOperand().isLiteral();
                 boolean rightOpLiteral = binaryOpInstruction.getRightOperand().isLiteral();
 
-                if(leftOpLiteral && !rightOpLiteral) {
+                if (leftOpLiteral && !rightOpLiteral) {
                     literalElement = (LiteralElement) binaryOpInstruction.getLeftOperand();
                     op = (Operand) binaryOpInstruction.getRightOperand();
-                }
-                else if(!leftOpLiteral && rightOpLiteral) {
+                } else if (!leftOpLiteral && rightOpLiteral) {
                     literalElement = (LiteralElement) binaryOpInstruction.getRightOperand();
                     op = (Operand) binaryOpInstruction.getLeftOperand();
-                }
-                else return "";
+                } else return "";
 
-                if(vars.get(dest.getName()).getVirtualReg() == vars.get(op.getName()).getVirtualReg()) {
+                if (vars.get(dest.getName()).getVirtualReg() == vars.get(op.getName()).getVirtualReg()) {
                     return "\tiinc " + vars.get(op.getName()).getVirtualReg() + " " + literalElement.getLiteral() + "\n";
-                }
-                else if(instruction.getPredecessors() != null) {
+                } else if (instruction.getPredecessors() != null) {
                     Instruction successor = (Instruction) instruction.getSuccessors().get(0);
-                    if(successor.getInstType() == InstructionType.ASSIGN) {
+                    if (successor.getInstType() == InstructionType.ASSIGN) {
                         Instruction rhsInstruction = ((AssignInstruction) successor).getRhs();
 
                         if (rhsInstruction instanceof SingleOpInstruction) {
                             Operand destOperand = (Operand) ((AssignInstruction) successor).getDest();
                             Operand assignOperand = (Operand) ((SingleOpInstruction) rhsInstruction).getSingleOperand();
 
-                            if(vars.get(destOperand.getName()).getVirtualReg()  == vars.get(op.getName()).getVirtualReg()) {
+                            if (vars.get(destOperand.getName()).getVirtualReg() == vars.get(op.getName()).getVirtualReg()) {
                                 return "\tiinc " + vars.get(destOperand.getName()).getVirtualReg() + " " + literalElement.getLiteral() + "\n" +
                                         "\t" + load(destOperand) +
                                         "\t" + load(assignOperand);
@@ -577,19 +582,19 @@ public class Jasmin implements JasminBackend {
         StringBuilder s = new StringBuilder();
 
         String exception;
-        if(instruction.equals("imul") && (exception = checkMulException(leftOp, rightOp)) != null){
+        if (instruction.equals("imul") && (exception = checkMulException(leftOp, rightOp)) != null) {
             return exception;
         }
-        if(instruction.equals("idiv") && (exception = checkDivException(leftOp, rightOp)) != null){
+        if (instruction.equals("idiv") && (exception = checkDivException(leftOp, rightOp)) != null) {
             return exception;
         }
 
-        if(leftOp.isLiteral() && rightOp.isLiteral()){
+        if (leftOp.isLiteral() && rightOp.isLiteral()) {
             LiteralElement result;
             int leftInt = Integer.parseInt(((LiteralElement) leftOp).getLiteral());
             int rightInt = Integer.parseInt(((LiteralElement) rightOp).getLiteral());
 
-            switch (instruction){
+            switch (instruction) {
                 case "iadd" -> result = new LiteralElement((leftInt + rightInt) + "", new Type(ElementType.INT32));
                 case "isub" -> result = new LiteralElement((leftInt - rightInt) + "", new Type(ElementType.INT32));
                 case "imul" -> result = new LiteralElement((leftInt * rightInt) + "", new Type(ElementType.INT32));
@@ -599,8 +604,7 @@ public class Jasmin implements JasminBackend {
 
             s.append("\t").append(load(result));
             stackLimit = Math.max(stackLimit, currentStack);
-        }
-        else {
+        } else {
             s.append("\t").append(load(leftOp)).append("\t").append(load(rightOp));
             s.append("\t").append(instruction).append("\n");
             stackLimit = Math.max(stackLimit, currentStack);
@@ -616,9 +620,9 @@ public class Jasmin implements JasminBackend {
         Operand operand = null;
         String prefix = "_icmp";
 
-        if(leftOp.isLiteral() && rightOp.isLiteral()) {
+        if (leftOp.isLiteral() && rightOp.isLiteral()) {
             currentStack++;
-            switch (instruction){
+            switch (instruction) {
                 case "eq", "ne", "and", "or" -> {
                     return bitwise(instruction, ((LiteralElement) leftOp).getLiteral(), ((LiteralElement) rightOp).getLiteral());
                 }
@@ -626,26 +630,23 @@ public class Jasmin implements JasminBackend {
                     return compare(instruction, ((LiteralElement) leftOp).getLiteral(), ((LiteralElement) rightOp).getLiteral());
                 }
             }
-        }
-        else if(leftOp.isLiteral() && !rightOp.isLiteral()) {
+        } else if (leftOp.isLiteral() && !rightOp.isLiteral()) {
             literalElement = (LiteralElement) leftOp;
             operand = (Operand) rightOp;
-        }
-        else if(!leftOp.isLiteral() && rightOp.isLiteral()) {
+        } else if (!leftOp.isLiteral() && rightOp.isLiteral()) {
             literalElement = (LiteralElement) rightOp;
             operand = (Operand) leftOp;
         }
 
-        if(literalElement != null && literalElement.getLiteral().equals("0")) {
+        if (literalElement != null && literalElement.getLiteral().equals("0")) {
             prefix = "";
         }
 
-        if(prefix.equals("")) {
+        if (prefix.equals("")) {
             s.append("\t").append(load(operand));
             stackLimit = Math.max(stackLimit, currentStack);
             currentStack--;
-        }
-        else {
+        } else {
             s.append("\t").append(load(leftOp));
             s.append("\t").append(load(rightOp));
             stackLimit = Math.max(stackLimit, currentStack);
@@ -668,13 +669,13 @@ public class Jasmin implements JasminBackend {
         var s = new StringBuilder();
         LiteralElement literal = null;
 
-        if(leftOp.isLiteral() && rightOp.isLiteral()) return getCond(instruction, leftOp, rightOp);
+        if (leftOp.isLiteral() && rightOp.isLiteral()) return getCond(instruction, leftOp, rightOp);
 
-        if(leftOp.isLiteral() && !rightOp.isLiteral()) literal = (LiteralElement) leftOp;
-        else if(!leftOp.isLiteral() && rightOp.isLiteral()) literal = (LiteralElement) rightOp;
+        if (leftOp.isLiteral() && !rightOp.isLiteral()) literal = (LiteralElement) leftOp;
+        else if (!leftOp.isLiteral() && rightOp.isLiteral()) literal = (LiteralElement) rightOp;
 
-        if(literal != null && instruction.equals("and") && literal.getLiteral().equals("0")) return "\ticonst_0\n";
-        if(literal != null && instruction.equals("or") && literal.getLiteral().equals("1")) return "\ticonst_1\n";
+        if (literal != null && instruction.equals("and") && literal.getLiteral().equals("0")) return "\ticonst_0\n";
+        if (literal != null && instruction.equals("or") && literal.getLiteral().equals("1")) return "\ticonst_1\n";
 
         s.append("\t").append(load(leftOp));
         s.append("\tifeq" + " FALSE").append(numCond).append("\n");
@@ -698,25 +699,24 @@ public class Jasmin implements JasminBackend {
         LiteralElement literal = null;
         Element element = null;
 
-        if(leftOp.isLiteral()){
+        if (leftOp.isLiteral()) {
             literal = (LiteralElement) leftOp;
             element = rightOp;
-        }
-        else if(rightOp.isLiteral()){
+        } else if (rightOp.isLiteral()) {
             literal = (LiteralElement) rightOp;
             element = leftOp;
         }
 
-        if(literal != null){
+        if (literal != null) {
             num = Integer.parseInt(literal.getLiteral());
 
-            if(element instanceof LiteralElement && isPowerOfTwo(num)){
+            if (element instanceof LiteralElement && isPowerOfTwo(num)) {
                 num = Integer.parseInt(((LiteralElement) element).getLiteral());
                 element = literal;
             }
 
-            if(isPowerOfTwo(num)){
-                LiteralElement literalElement = new LiteralElement((int)(Math.log(num)/Math.log(2)) + "", new Type(ElementType.INT32));
+            if (isPowerOfTwo(num)) {
+                LiteralElement literalElement = new LiteralElement((int) (Math.log(num) / Math.log(2)) + "", new Type(ElementType.INT32));
                 return getArithmetic("ishl", element, literalElement);
             }
         }
@@ -727,8 +727,8 @@ public class Jasmin implements JasminBackend {
     private String checkDivException(Element leftOp, Element rightOp) {
         int num;
 
-        if(rightOp.isLiteral() && isPowerOfTwo((num = Integer.parseInt(((LiteralElement) rightOp).getLiteral())))){
-            LiteralElement literal = new LiteralElement((int)(Math.log(num)/Math.log(2)) + "", new Type(ElementType.INT32));
+        if (rightOp.isLiteral() && isPowerOfTwo((num = Integer.parseInt(((LiteralElement) rightOp).getLiteral())))) {
+            LiteralElement literal = new LiteralElement((int) (Math.log(num) / Math.log(2)) + "", new Type(ElementType.INT32));
             return getArithmetic("ishr", leftOp, literal);
         }
 
@@ -739,10 +739,10 @@ public class Jasmin implements JasminBackend {
         boolean bool1 = leftOp.equals("1");
         boolean bool2 = rightOp.equals("1");
 
-        if(instruction.equals("eq") && bool1 == bool2) return "\ticonst_1\n";
-        if(instruction.equals("ne") && bool1 != bool2) return "\ticonst_1\n";
-        if(instruction.equals("and") && (bool1 && bool2)) return "\ticonst_1\n";
-        if(instruction.equals("or") && (bool1 || bool2)) return "\ticonst_1\n";
+        if (instruction.equals("eq") && bool1 == bool2) return "\ticonst_1\n";
+        if (instruction.equals("ne") && bool1 != bool2) return "\ticonst_1\n";
+        if (instruction.equals("and") && (bool1 && bool2)) return "\ticonst_1\n";
+        if (instruction.equals("or") && (bool1 || bool2)) return "\ticonst_1\n";
 
         return "\ticonst_0\n";
     }
@@ -751,16 +751,16 @@ public class Jasmin implements JasminBackend {
         int int1 = Integer.parseInt(leftOp);
         int int2 = Integer.parseInt(rightOp);
 
-        if(instruction.equals("lt") && int1 < int2) return "\ticonst_1\n";
-        if(instruction.equals("le") && int1 <= int2) return "\ticonst_1\n";
-        if(instruction.equals("gt") && int1 > int2) return "\ticonst_1\n";
-        if(instruction.equals("ge") && int1 >= int2) return "\ticonst_1\n";
+        if (instruction.equals("lt") && int1 < int2) return "\ticonst_1\n";
+        if (instruction.equals("le") && int1 <= int2) return "\ticonst_1\n";
+        if (instruction.equals("gt") && int1 > int2) return "\ticonst_1\n";
+        if (instruction.equals("ge") && int1 >= int2) return "\ticonst_1\n";
 
         return "\ticonst_0\n";
     }
 
     private Boolean isPowerOfTwo(int n) {
-        while(n % 2 == 0) {
+        while (n % 2 == 0) {
             n = n / 2;
         }
         return n == 1;
@@ -770,36 +770,34 @@ public class Jasmin implements JasminBackend {
         String s = "";
         int numLoads = 1;
 
-        if(e.isLiteral()){
+        if (e.isLiteral()) {
             LiteralElement literalElement = (LiteralElement) e;
-            switch (literalElement.getType().getTypeOfElement()){
+            switch (literalElement.getType().getTypeOfElement()) {
                 case INT32, BOOLEAN -> {
                     int val = Integer.parseInt(literalElement.getLiteral());
-                    if(val >= 0 && val < 6) s += "iconst_" + literalElement.getLiteral();
-                    else if(val >= 0 && val < 128) s += "bipush " + literalElement.getLiteral();
-                    else if(val >= 0 && val < 32768) s += "sipush " + literalElement.getLiteral();
+                    if (val >= 0 && val < 6) s += "iconst_" + literalElement.getLiteral();
+                    else if (val >= 0 && val < 128) s += "bipush " + literalElement.getLiteral();
+                    else if (val >= 0 && val < 32768) s += "sipush " + literalElement.getLiteral();
                     else s += "ldc " + literalElement.getLiteral();
                 }
                 default -> s += "\tldc " + literalElement.getLiteral();
             }
-        }
-        else{
+        } else {
             Operand op = (Operand) e;
             int id;
 
-            if(op.isParameter()) id = op.getParamId();
+            if (op.isParameter()) id = op.getParamId();
             else id = vars.get(op.getName()).getVirtualReg();
 
-            if(id != -1){
-                switch (op.getType().getTypeOfElement()){
+            if (id != -1) {
+                switch (op.getType().getTypeOfElement()) {
                     case INT32 -> {
-                        if(op instanceof ArrayOperand arrayOp){
+                        if (op instanceof ArrayOperand arrayOp) {
                             s += "aload" + (id < 4 ? '_' : ' ') + id + "\n\t";
-                            if(!arrayOp.getIndexOperands().isEmpty()) s += load(arrayOp.getIndexOperands().get(0));
+                            if (!arrayOp.getIndexOperands().isEmpty()) s += load(arrayOp.getIndexOperands().get(0));
                             s += "iaload";
                             numLoads += 2;
-                        }
-                        else{
+                        } else {
                             s += "iload" + (id < 4 ? '_' : ' ') + id;
                         }
                     }
@@ -807,15 +805,14 @@ public class Jasmin implements JasminBackend {
                     case ARRAYREF, OBJECTREF, CLASS, STRING -> s += "aload" + (id < 4 ? '_' : ' ') + id;
                     case THIS -> s += "aload_0";
                 }
-            }
-            else{
+            } else {
                 s += "aload_0\n";
                 s += "\tgetfield " + classUnit.getClassName() + "/" + op.getName();
                 s += getType(e.getType());
 
-                if(op instanceof ArrayOperand arrayOp){
+                if (op instanceof ArrayOperand arrayOp) {
                     s += "\n\t";
-                    if(!arrayOp.getIndexOperands().isEmpty()) s += load(arrayOp.getIndexOperands().get(0));
+                    if (!arrayOp.getIndexOperands().isEmpty()) s += load(arrayOp.getIndexOperands().get(0));
                     s += "iaload";
                     numLoads += 2;
                 }
@@ -829,7 +826,7 @@ public class Jasmin implements JasminBackend {
     private String store(Element e) {
         String s = "";
 
-        if(e.isLiteral()){
+        if (e.isLiteral()) {
             LiteralElement literalElement = (LiteralElement) e;
             int id = Integer.parseInt(literalElement.getLiteral());
             if (literalElement.getType().getTypeOfElement() == ElementType.INT32) {
@@ -837,21 +834,19 @@ public class Jasmin implements JasminBackend {
             } else {
                 s += "\tstore " + id;
             }
-        }
-        else{
+        } else {
             Operand op = (Operand) e;
             int id;
 
-            if(op.isParameter()) id = op.getParamId();
+            if (op.isParameter()) id = op.getParamId();
             else id = vars.get(op.getName()).getVirtualReg();
 
-            if(id != -1){
-                switch (op.getType().getTypeOfElement()){
+            if (id != -1) {
+                switch (op.getType().getTypeOfElement()) {
                     case INT32 -> {
-                        if(op instanceof ArrayOperand){
+                        if (op instanceof ArrayOperand) {
                             s += "\tiastore";
-                        }
-                        else{
+                        } else {
                             s += "\tistore" + (id < 4 ? "_" : " ") + id;
                         }
                     }
@@ -859,9 +854,8 @@ public class Jasmin implements JasminBackend {
                     case ARRAYREF, OBJECTREF, CLASS, STRING -> s += "\tastore" + (id < 4 ? '_' : ' ') + id;
                     case THIS -> s += "astore_0";
                 }
-            }
-            else{
-                s +=  "\tputfield " + getType(e.getType()) + "/" + op.getName() + " " + getType(e.getType());
+            } else {
+                s += "\tputfield " + getType(e.getType()) + "/" + op.getName() + " " + getType(e.getType());
             }
         }
         s += "\n";
@@ -892,15 +886,15 @@ public class Jasmin implements JasminBackend {
     }
 
     private String getClassFullName(String className) {
-        for(String imp : classUnit.getImports()){
-                String[] splited = imp.split("\\.");
+        for (String imp : classUnit.getImports()) {
+            String[] splited = imp.split("\\.");
 
-                if(splited.length == 0 && imp.equals(className)){
-                    return imp.replace('.', '/');
-                }
-                if(splited[splited.length-1].equals(className)){
-                    return splited[splited.length-1].replace('.', '/');
-                }
+            if (splited.length == 0 && imp.equals(className)) {
+                return imp.replace('.', '/');
+            }
+            if (splited[splited.length - 1].equals(className)) {
+                return splited[splited.length - 1].replace('.', '/');
+            }
         }
 
         return className;
