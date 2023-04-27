@@ -6,7 +6,8 @@ class MyClass {
 
     public int foo() {
         MyClass d = new MyClass();
-        int a = 6 + 8 + 7 + d + 6 + true;
+        int a;
+        a = 6 + d * 5 + d;
         return a;
     }
 }

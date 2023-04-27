@@ -117,7 +117,10 @@ public class Analysis implements JmmAnalysis {
      * @return "invalid_type" if there are errors inside the operation, type of the operation otherwise
      */
     private String getTypeOfBinaryOp(JmmNode node) {
-        JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
+        System.out.println("BINARYOP ::" + node);
+        JmmNode first = node.getChildren().get(0);
+        System.out.println("FIRST :: " + first);
+        JmmNode second = node.getChildren().get(1);
         String firstType, secondType, result;
         firstType = switch (first.getKind()) {
             case "Identifier" -> getVarType(first.get("value"));
@@ -144,11 +147,6 @@ public class Analysis implements JmmAnalysis {
             case "*":
             case "/":
             case "%":
-            case "+=":
-            case "-=":
-            case "*=":
-            case "/=":
-            case "%=":
             case "&":
             case "|":
             case "^":
@@ -210,8 +208,8 @@ public class Analysis implements JmmAnalysis {
             case "Boolean" -> secondType = "boolean";
             case "Integer" -> secondType = "int";
             case "BinaryOp" -> {
-                secondType = getTypeOfBinaryOp(first);
-                reports.addAll(visitBinaryOp(reports, first));
+                secondType = getTypeOfBinaryOp(second);
+                reports.addAll(visitBinaryOp(reports, second));
             }
             case "ArrayAcess" ->{
                 secondType = getArrayAccessReturn(second);
@@ -222,7 +220,7 @@ public class Analysis implements JmmAnalysis {
                 System.out.println("NODE TYPE NAO CONTABILIZADO EM visitBinaryOp : " + node.getKind());
             }
         }
-        System.out.println("Evaluating " + first.getKind() + " and " + second.getKind());
+        System.out.println("Evaluating " + first.getKind() + " "+ operator + " " + second.getKind());
         System.out.println("Evaluating " + firstType + " " + operator + " " + secondType);
         switch (operator) {
             //Comparators
@@ -242,25 +240,6 @@ public class Analysis implements JmmAnalysis {
                 if (!Objects.equals(firstType, "invalid_type") && !Objects.equals(secondType, "invalid_type")) {
                     if (!Objects.equals(firstType, "int") || !Objects.equals(secondType, "int")) {
                         reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'."));
-                    }
-                }
-                break;
-            //Incrementation
-            case "+=":
-            case "-=":
-            case "*=":
-            case "/=":
-            case "%=":
-                if (!Objects.equals(firstType, "invalid_type")) {
-                    if (!Objects.equals(first.getKind(), "Identifier")) {
-                        reports.add(createReport(first, "Expected a variable, found '" + first.get("value")));
-                    } else if (!Objects.equals(firstType, secondType)) {
-                        reports.add(createReport(first, "Incompatible types. Cannot use '" + operator + "' with '" + firstType + "' and '" + secondType + "'."));
-                    }
-                    if (!Objects.equals(secondType, "invalid_type")) {
-                        if (!Objects.equals(secondType, "integer")) {
-                            reports.add(createReport(second, "Trying to increment '" + firstType + "' to '" + secondType + "'."));
-                        }
                     }
                 }
                 break;
@@ -587,6 +566,7 @@ public class Analysis implements JmmAnalysis {
                 case "BinaryOp":
                     rightType = getTypeOfBinaryOp(assignNode);
                     reports.addAll(visitBinaryOp(reports,assignNode));
+                    break;
             }
         }
         return reports;
