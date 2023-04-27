@@ -441,7 +441,7 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "NewObject":
                 String assignType = child.getChildren().get(0).get("type");
-                if (Objects.equals(assignType, "int") || Objects.equals(assignType, "boolean")) assignType += "[]";
+                if (child.getChildren().size() == 2) assignType += "[]";
                 if (varType == null) {
                     String message = "Variable " + root.get("var") + " does not exist.";
                     reports.add(createReport(root, message));

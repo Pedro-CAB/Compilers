@@ -7,9 +7,11 @@ class ArrayIndexNotInt {
     public int foo() {
         boolean[] a;
         boolean b;
+        ArrayIndexNotInt c;
 
         a = new boolean[2];
         b = true;
+        c = new ArrayIndexNotInt();
 
         return a[b];
     }
