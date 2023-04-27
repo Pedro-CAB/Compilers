@@ -1,11 +1,18 @@
-import pao.a;
+import MyClass;
+import io;
 
-class MyA{
-    int c;
-    public MyA f(MyB b){
+class CompileMethodInvocation {
 
-       t.a(b,1);
+    public static void main(String[] args) {
+    }
 
-       return b;
+    public int foo() {
+        int a;
+        a = MyClass.getNUmber();
+
+        MyClass myClassObj = new MyClass();
+        myClassObj.getNUmber();
+
+        return 0;
     }
 }
