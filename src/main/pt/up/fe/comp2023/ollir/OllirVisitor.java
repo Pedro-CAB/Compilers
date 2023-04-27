@@ -132,6 +132,29 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
+    private String getSup(String method){
+
+        for (String imp : symbolTable.getImports()){
+
+           int dot_index = imp.indexOf('.');
+
+           if (dot_index > 0){
+
+
+               String m= imp.substring(dot_index + 1, imp.length() - 2);
+
+               if (m.equals(method)){
+                   return imp.substring(7, dot_index);
+               }
+           }
+           else{
+               return imp.substring(7, imp.length()-2);
+           }
+        }
+
+        return "";
+    }
+
     private boolean isInvokeVirtual(String method_name){
 
         return symbolTable.getMethods().contains(method_name);
@@ -397,7 +420,10 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                     }
                 }
                 else{
-                    String method_sup = child.getJmmParent().getJmmChild(0).get("value");
+
+                    String method_sup = getSup(method_name);
+                    //String method_sup = getSup(method);
+                    //String method_sup = child.getJmmParent().getJmmChild(0).get("value");
                     if (child.getNumChildren() >= 1){
                         String method_arg = child.getJmmChild(0).getJmmChild(0).get("value");
 
@@ -413,64 +439,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                     }
                 }
             }
-
-            /**
-            String method_sup;
-
-            String arg_type = "";
-
-            JmmNode temp = method_aux.getJmmChild(0);
-            method_arg = temp.getJmmChild(0).get("value");
-
-            method_sup = jmmNode.getJmmChild(0).get("value");
-
-            for (Symbol symbol : symbolTable.getLocalVariables(method)){
-                if (Objects.equals(method_arg, symbol.getName())){
-                    arg_type += getType(symbol.getType());
-                }
-            }
-            if (arg_type.equals("")){
-                arg_type += getParamType(method_arg, method);
-                arg_type += getFieldType(method_arg);
-
-            }
-
-            if (arg_type.equals("") && Objects.equals(temp.getJmmChild(0).getKind(), "Integer")) {
-                arg_type += ".i32";
-            }
-
-            ollirCode += "\t\tinvokestatic(" + method_sup + ", " + "\"" + method_name + "\", " +
-                    method_arg + arg_type + ").V;\n";
-
-            if (isInvokeVirtual(method_name)) {
-
-                if (symbolTable.getParameters(method_name).size() > 0) {
-
-                    for (JmmNode child1 : jmmNode.getChildren()) {
-                        if (Objects.equals(child1.getKind(), "MethodCall")) {
-                            JmmNode c = child1.getJmmChild(0);
-
-                            for (JmmNode temp1 : c.getChildren()) {
-                                if (Objects.equals(temp1.getKind(), "Identifier")) {
-                                    method_arg = temp1.get("value");
-                                    arg_type = findType(temp1, method);
-                                }
-                            }
-
-                        }
-                    }
-
-
-                    ollirCode += "\t\tinvokevirtual(" + object + object_type + ", \"" + method_name + "\", " +
-                            method_arg + arg_type + ")" + getType(
-                            symbolTable.getReturnType(method_name)) + ";\n";
-                } else {
-                    ollirCode += "\t\tinvokevirtual(" + object + object_type + ", \"" + method_name + "\"" + ")" + getType(
-                            symbolTable.getReturnType(method_name)) + ";\n";
-                }
-            }
-
-            localIndex++;**/
         }
 
         return "";
