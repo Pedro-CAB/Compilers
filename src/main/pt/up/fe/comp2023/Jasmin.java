@@ -5,9 +5,7 @@ import pt.up.fe.comp.jmm.jasmin.JasminBackend;
 import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 
-import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -79,7 +77,10 @@ public class Jasmin implements JasminBackend {
             }
             jasminCode.append(")").append(getType(method.getReturnType()));
             StringBuilder methodInstructions = new StringBuilder();
-            for (Instruction instruction : method.getInstructions()) {
+            int numInstructions = method.getInstructions().size();
+            for (int i = 0; i < numInstructions; i++) {
+                if(i < numInstructions-1) method.getInstr(i).addSucc(method.getInstr(i+1));
+                Instruction instruction = method.getInstr(i);
                 vars = method.getVarTable();
                 methodInstructions.append(dealWithInstruction(instruction, method.getLabels(instruction), method.getReturnType(), false));
             }
@@ -89,10 +90,8 @@ public class Jasmin implements JasminBackend {
             jasminCode.append("\n.end method");
         }
 
-        JasminResult jasminResult = new JasminResult(jasminCode.toString());
-        File outputDir = new File("test/fixtures/public/testing");
-        jasminResult.compile(outputDir);
-        return new JasminResult(ollirResult, jasminCode.toString(), Collections.emptyList());
+
+        return new JasminResult(jasminCode.toString());
     }
 
     private String dealWithInstruction(Instruction instruction, List<String> labels, Type returnType, Boolean assign) {
@@ -150,7 +149,7 @@ public class Jasmin implements JasminBackend {
 
         switch (callInstruction.getInvocationType()){
             case invokevirtual -> s.append(dealWithInvokeVirtual(callInstruction, returnType, assign));
-            case invokeinterface -> s.append(dealWithInvokeInterface(callInstruction, assign));
+            case invokeinterface -> s.append(dealWithInvokeInterface(callInstruction, returnType, assign));
             case invokespecial -> s.append(dealWithInvokeSpecial(callInstruction, assign));
             case invokestatic -> s.append(dealWithInvokeStatic(callInstruction, assign));
             case NEW -> s.append(dealWithNEW(callInstruction));
@@ -196,9 +195,40 @@ public class Jasmin implements JasminBackend {
         return s.toString();
     }
 
-    private String dealWithInvokeInterface(CallInstruction callInstruction, Boolean assign){
-        String s = "";
-        return s;
+    private String dealWithInvokeInterface(CallInstruction callInstruction, Type returnType, Boolean assign){
+        StringBuilder s = new StringBuilder();
+
+        Operand op = (Operand) callInstruction.getFirstArg();
+        LiteralElement element = (LiteralElement) callInstruction.getSecondArg();
+        String secondArg = element.getLiteral().replace("\"", "");
+
+        s.append("\t").append(load(op));
+
+        for(Element e : callInstruction.getListOfOperands()){
+            s.append("\t").append(load(e));
+        }
+
+        s.append("\tinvokeinterface ").append(getType(op.getType())).append("/").append(secondArg).append("(");
+
+        Stream<String> opTypes = callInstruction.getListOfOperands().stream().map(e -> getType(e.getType()));
+        s.append(opTypes.collect(Collectors.joining()));
+
+        s.append(")").append(getType(callInstruction.getReturnType())).append(" ").append(callInstruction.getListOfOperands().size()).append("\n");
+
+        stackLimit = Math.max(stackLimit, currentStack);
+        for(int i = 0; i <= callInstruction.getListOfOperands().size(); i++){
+            currentStack--;
+        }
+
+        if(returnType.getTypeOfElement() != ElementType.VOID && !assign){
+            s.append("\tpop\n");
+            stackLimit = Math.max(stackLimit, currentStack);
+            currentStack--;
+        }
+
+        currentStack++;
+
+        return s.toString();
     }
 
     private String dealWithInvokeSpecial(CallInstruction callInstruction, Boolean assign){
@@ -296,7 +326,7 @@ public class Jasmin implements JasminBackend {
         return s.toString();
     }
 
-    private String dealWithArrayLength(CallInstruction callInstruction){
+    private String dealWithArrayLength(CallInstruction callInstruction) {
         stackLimit = Math.max(stackLimit, currentStack);
         return "\t" + load(callInstruction.getFirstArg()) + "\tarraylength\n";
     }
@@ -416,27 +446,6 @@ public class Jasmin implements JasminBackend {
         return s.toString();
     }
 
-    private String dealWithNoper(Instruction instruction, List<String> labels, Type returnType, Boolean assign) {
-        if(instruction instanceof SingleOpInstruction singleOpInstruction) return dealWithSingleOp(singleOpInstruction);
-        if(instruction instanceof SingleOpCondInstruction singleOpInstruction) return dealWithSingleCondOp(singleOpInstruction, labels, returnType, assign);
-        return "";
-    }
-
-    private String dealWithSingleOp(SingleOpInstruction singleOpInstruction) {
-        return "\t" + load(singleOpInstruction.getSingleOperand());
-    }
-
-    private String dealWithSingleCondOp(SingleOpCondInstruction singleOpInstruction, List<String> labels, Type returnType, Boolean assign) {
-
-        String s = dealWithInstruction(singleOpInstruction.getCondition(), labels, returnType, assign) +
-                "\tifne " + singleOpInstruction.getLabel() + " \n";
-
-        stackLimit = Math.max(stackLimit, currentStack);
-        currentStack--;
-
-        return s;
-    }
-
     private String dealWithBinaryOp(BinaryOpInstruction opInstruction) {
         StringBuilder s = new StringBuilder();
 
@@ -449,9 +458,21 @@ public class Jasmin implements JasminBackend {
             case SUB -> s.append(getArithmetic("isub", leftOp, rightOp));
             case MUL -> s.append(getArithmetic("imul", leftOp, rightOp));
             case DIV -> s.append(getArithmetic("idiv", leftOp, rightOp));
-            case SHR -> {}
-            case SHL -> {}
-            case SHRR -> {}
+            case SHR -> {
+                s.append(load(leftOp));
+                s.append(load(rightOp));
+                s.append("\tishr\n");
+                stackLimit = Math.max(stackLimit, currentStack);
+                currentStack--;
+            }
+            case SHL -> {
+                s.append(load(leftOp));
+                s.append(load(rightOp));
+                s.append("\tishl\n");
+                stackLimit = Math.max(stackLimit, currentStack);
+                currentStack--;
+            }
+            case SHRR -> {/* I have no idea what this is */}
             case XOR -> {
                 s.append(load(leftOp));
                 s.append(load(rightOp));
@@ -481,18 +502,29 @@ public class Jasmin implements JasminBackend {
             case GTE -> s.append(getCond("ge", leftOp, rightOp));
             case ANDB -> s.append(getAndOr("and", leftOp, rightOp));
             case ORB -> s.append(getAndOr("or", leftOp, rightOp));
-            case NOTB -> {
-                s.append("\tif_ne TRUE").append(numCond).append("\n");
-                s.append("\ticonst_1\n");
-                s.append("\tgoto FALSE").append(numCond).append("\n");
-                s.append("TRUE").append(numCond).append(":\n");
-                s.append("\ticonst_0");
-                s.append("FALSE").append(numCond).append(":\n");
-                numCond++;
-            }
-            case NOT -> {}
         }
         return s.toString();
+    }
+
+    private String dealWithNoper(Instruction instruction, List<String> labels, Type returnType, Boolean assign) {
+        if(instruction instanceof SingleOpInstruction singleOpInstruction) return dealWithSingleOp(singleOpInstruction);
+        if(instruction instanceof SingleOpCondInstruction singleOpInstruction) return dealWithSingleCondOp(singleOpInstruction, labels, returnType, assign);
+        return "";
+    }
+
+    private String dealWithSingleOp(SingleOpInstruction singleOpInstruction) {
+        return "\t" + load(singleOpInstruction.getSingleOperand());
+    }
+
+    private String dealWithSingleCondOp(SingleOpCondInstruction singleOpInstruction, List<String> labels, Type returnType, Boolean assign) {
+
+        String s = dealWithInstruction(singleOpInstruction.getCondition(), labels, returnType, assign) +
+                "\tifne " + singleOpInstruction.getLabel() + " \n";
+
+        stackLimit = Math.max(stackLimit, currentStack);
+        currentStack--;
+
+        return s;
     }
 
     private String checkIINC(Operand dest, Instruction instruction) {
@@ -635,7 +667,6 @@ public class Jasmin implements JasminBackend {
     private String getAndOr(String instruction, Element leftOp, Element rightOp) {
         var s = new StringBuilder();
         LiteralElement literal = null;
-        String result = null;
 
         if(leftOp.isLiteral() && rightOp.isLiteral()) return getCond(instruction, leftOp, rightOp);
 
