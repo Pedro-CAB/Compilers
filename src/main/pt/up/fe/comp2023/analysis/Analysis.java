@@ -117,9 +117,11 @@ public class Analysis implements JmmAnalysis {
      * @return "invalid_type" if there are errors inside the operation, type of the operation otherwise
      */
     private String getTypeOfBinaryOp(JmmNode node) {
-        JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
-        String firstType, secondType;
-        System.out.println(vars);
+        System.out.println("BINARYOP ::" + node);
+        JmmNode first = node.getChildren().get(0);
+        System.out.println("FIRST :: " + first);
+        JmmNode second = node.getChildren().get(1);
+        String firstType, secondType, result;
         firstType = switch (first.getKind()) {
             case "Identifier" -> getVarType(first.get("value"));
             case "Boolean" -> "boolean";
@@ -131,14 +133,12 @@ public class Analysis implements JmmAnalysis {
             case "Identifier" -> getVarType(second.get("value"));
             case "Boolean" -> "boolean";
             case "Integer" -> "int";
-            case "BinaryOp" -> getTypeOfBinaryOp(first);
+            case "BinaryOp" -> getTypeOfBinaryOp(second);
             default -> "invalid_type";
         };
-        System.out.println("getTypeOfBynaryOp::Evaluating " + firstType + " " + node.get("op") + " " + secondType);
         switch (node.get("op")) {
             case ">":
             case "<":
-            case "==":
             case "!=":
             case ">=":
             case "<=":
@@ -147,19 +147,27 @@ public class Analysis implements JmmAnalysis {
             case "*":
             case "/":
             case "%":
-                if (!Objects.equals(firstType, "integer") || !Objects.equals(secondType, "integer")) {
-                    return "invalid";
-                } else return "integer";
-            case "+=":
-            case "-=":
-            case "*=":
-            case "/=":
-            case "%=":
-                if (!Objects.equals(first.getKind(), "Identifier") || (!Objects.equals(second.getKind(), "Integer") && !Objects.equals(second.getKind(), "Identifier")))
-                    return "invalid";
+            case "&":
+            case "|":
+            case "^":
+                if (!Objects.equals(firstType, "int") || !Objects.equals(secondType, "int"))
+                    result = "invalid_type";
+                else result = "int";
+                break;
+            case "==":
+                if (!Objects.equals(firstType, secondType) && ((!Objects.equals(firstType, table.getClassName()) && !Objects.equals(secondType, table.getSuper())) || (!Objects.equals(secondType, table.getClassName()) && !Objects.equals(firstType, table.getSuper()))))
+                    result = "invalid_type";
+                else result = "boolean";
+            case "&&":
+            case "||":
+                if (!Objects.equals(firstType, "boolean") || !Objects.equals(secondType, "boolean")) result = "invalid";
+                else result = "boolean";
+                break;
             default:
-                return "invalid";
+                result = "invalid_type";
         }
+        System.out.println("getTypeOfBinaryOp::" + firstType + " " + node.get("op") + " " + secondType + " ==> " + result);
+        return result;
     }
 
     /**
@@ -169,7 +177,6 @@ public class Analysis implements JmmAnalysis {
      * @return Updated list of reports with possible new errors detected inside this node
      */
     private List<Report> visitBinaryOp(List<Report> reports, JmmNode node) {
-        System.out.println("Called visitBinaryOp");
         String operator = node.get("op");
         JmmNode first = node.getChildren().get(0), second = node.getChildren().get(1);
         String firstType, secondType;
@@ -201,8 +208,8 @@ public class Analysis implements JmmAnalysis {
             case "Boolean" -> secondType = "boolean";
             case "Integer" -> secondType = "int";
             case "BinaryOp" -> {
-                secondType = getTypeOfBinaryOp(first);
-                reports.addAll(visitBinaryOp(reports, first));
+                secondType = getTypeOfBinaryOp(second);
+                reports.addAll(visitBinaryOp(reports, second));
             }
             case "ArrayAcess" ->{
                 secondType = getArrayAccessReturn(second);
@@ -213,7 +220,7 @@ public class Analysis implements JmmAnalysis {
                 System.out.println("NODE TYPE NAO CONTABILIZADO EM visitBinaryOp : " + node.getKind());
             }
         }
-        System.out.println("Evaluating " + first.getKind() + " and " + second.getKind());
+        System.out.println("Evaluating " + first.getKind() + " "+ operator + " " + second.getKind());
         System.out.println("Evaluating " + firstType + " " + operator + " " + secondType);
         switch (operator) {
             //Comparators
@@ -233,25 +240,6 @@ public class Analysis implements JmmAnalysis {
                 if (!Objects.equals(firstType, "invalid_type") && !Objects.equals(secondType, "invalid_type")) {
                     if (!Objects.equals(firstType, "int") || !Objects.equals(secondType, "int")) {
                         reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'."));
-                    }
-                }
-                break;
-            //Incrementation
-            case "+=":
-            case "-=":
-            case "*=":
-            case "/=":
-            case "%=":
-                if (!Objects.equals(firstType, "invalid")) {
-                    if (!Objects.equals(first.getKind(), "Identifier")) {
-                        reports.add(createReport(first, "Expected a variable, found '" + first.get("value")));
-                    } else if (!Objects.equals(firstType, secondType)) {
-                        reports.add(createReport(first, "Incompatible types. Cannot use '" + operator + "' with '" + firstType + "' and '" + secondType + "'."));
-                    }
-                    if (!Objects.equals(secondType, "invalid")) {
-                        if (!Objects.equals(secondType, "integer")) {
-                            reports.add(createReport(second, "Trying to increment '" + firstType + "' to '" + secondType + "'."));
-                        }
                     }
                 }
                 break;
@@ -302,9 +290,7 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "BinaryOp":
                 String operationType = getTypeOfBinaryOp(child);
-                System.out.println("OPERATION TYPE -> " + operationType);
-                if (Objects.equals(operationType, "invalid")) {
-                    System.out.println("CALLING VISITBINARYOP OVER -> " + child.getKind());
+                if (Objects.equals(operationType, "invalid_type")) {
                     reports.addAll(visitBinaryOp(reports, child));
                 } else if (!Objects.equals(operationType, returnType)) {
                     reports.add(createReport(child, "Method " + methodName + " should return '" + returnType + "' but is returning '" + operationType + "'."));
@@ -319,7 +305,6 @@ public class Analysis implements JmmAnalysis {
                         String methodReturnType = table.getReturnType(calledMethodName).getName();
                         String expectedReturnType = table.getReturnType(methodName).getName();
                         if (!Objects.equals(methodReturnType, expectedReturnType)){
-                            System.out.println("YES");
                             reports.add(createReport(child, "Return type of " + methodName + " is '" + expectedReturnType + "' but " + calledMethodName + " returns '" + methodReturnType + "'."));
                         }
                     }
@@ -493,7 +478,7 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "BinaryOp":
                 String operationType = getTypeOfBinaryOp(child);
-                if (Objects.equals(operationType, "invalid")) {
+                if (Objects.equals(operationType, "invalid_type")) {
                     reports.addAll(visitBinaryOp(reports, child));
                 } else if (!Objects.equals(operationType, varType)) {
                     reports.add(createReport(child, "Assignment between a '" + varType + "' and a '" + operationType + "'."));
@@ -561,17 +546,35 @@ public class Analysis implements JmmAnalysis {
      */
     private List<Report> visitDeclaration(List<Report> reports, JmmNode root){
         String varName = root.get("var");
+        String leftType = root.getJmmChild(0).get("type");
         updateRelevantVars();
-        String className = table.getClassName(), methodClassName = root.getChildren().get(0).get("type");
-        if (getVarType(varName) == null){
-            reports.add(createReport(root,"Variable " + varName + " is already declared."));
+        if (root.getChildren().size() == 2){
+            String rightType;
+            JmmNode assignNode = root.getJmmChild(1);
+            switch(assignNode.getKind()){
+                case "Integer":
+                    rightType = "int";
+                    break;
+                case "Boolean":
+                    rightType = "boolean";
+                    break;
+                case "Identifier":
+                    rightType = getVarType(assignNode.get("value"));
+                    if (rightType == null) rightType = "invalid_type";
+                    reports.addAll(visitIdentifier(reports,assignNode,rightType));
+                    break;
+                case "BinaryOp":
+                    rightType = getTypeOfBinaryOp(assignNode);
+                    reports.addAll(visitBinaryOp(reports,assignNode));
+                    break;
+            }
         }
         return reports;
     }
     /**
      * Visits MethodBody Node and checks for errors
      * @param reports List of Reports of previosuly found errors
-     * @param root MethodBody Node
+     * @param node MethodBody Node
      * @return Updated List of Reports
      */
     private List<Report> visitMethodBody(List<Report> reports, JmmNode node){
@@ -701,7 +704,6 @@ public class Analysis implements JmmAnalysis {
                 String kind = node.getKind();
                 switch(kind){
                     case "Argument":
-                        //Por agora não é necessário explorar os argumentos
                         break;
                     case "MethodBody":
                         reports.addAll(visitMethodBody(reports,node));
@@ -736,7 +738,7 @@ public class Analysis implements JmmAnalysis {
     /**
      * Visits IfElse Node and checks for errors
      * @param reports List of Reports of previosuly found errors
-     * @param root IfElse Node
+     * @param node IfElse Node
      * @return Updated List of Reports
      */
     private List<Report> visitIfElse(List<Report> reports, JmmNode node) {
@@ -762,7 +764,7 @@ public class Analysis implements JmmAnalysis {
     /**
      * Visits Program Node and checks for errors
      * @param reports List of Reports of previosuly found errors
-     * @param root Program Node
+     * @param node Program Node
      * @return Updated List of Reports
      */
     private List<Report> visitProgram(List<Report> reports, JmmNode node){
