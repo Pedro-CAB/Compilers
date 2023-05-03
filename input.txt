@@ -1,18 +1,9 @@
-import MyClass;
 import io;
 
-class CompileMethodInvocation {
+class Arithmetic_and {
+	public static void main(String[] args) {
+		boolean a;
 
-    public static void main(String[] args) {
-    }
-
-    public int foo() {
-        int a;
-        a = MyClass.getNUmber();
-
-        MyClass myClassObj = new MyClass();
-        myClassObj.getNUmber();
-
-        return 0;
-    }
+		a = true && false;
+	}
 }
