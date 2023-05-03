@@ -81,5 +81,4 @@ public class Launcher {
 
         return config;
     }
-
 }
