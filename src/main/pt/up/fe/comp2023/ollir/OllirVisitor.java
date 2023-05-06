@@ -254,6 +254,10 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
+        if (method.equals("main")){
+            ollirCode += "\t\tret" + method_type + ";\n";
+        }
+
         ollirCode+= "\t}\n";
 
         methodIndex++;

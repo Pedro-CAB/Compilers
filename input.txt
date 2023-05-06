@@ -1,9 +1,18 @@
 import io;
 
-class Arithmetic_and {
-	public static void main(String[] args) {
-		boolean a;
+class CompileMethodInvocation {
 
-		a = true && false;
-	}
+    public static void main(String[] args) {
+
+    }
+
+    public int foo() {
+        int a;
+
+        a = 1;
+
+        io.println(a);
+
+        return 0;
+    }
 }
