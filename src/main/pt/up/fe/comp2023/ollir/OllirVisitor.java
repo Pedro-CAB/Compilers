@@ -254,6 +254,10 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
+        if (method.equals("main")){
+            ollirCode += "\t\tret" + method_type + ";\n";
+        }
+
         ollirCode+= "\t}\n";
 
         methodIndex++;
@@ -363,8 +367,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         if (method_aux.getNumChildren() > 0) {
 
             JmmNode temp = method_aux.getJmmChild(0);
-            method_arg = temp.getJmmChild(0).get("value");
-
+            if (temp.getJmmChild(0).hasAttribute("value"))
+                method_arg = temp.getJmmChild(0).get("value");
+            else{
+                method_arg = temp.getJmmChild(0).getKind();
+            }
             method_sup = jmmNode.getJmmChild(0).get("value");
 
             for (Symbol symbol : symbolTable.getLocalVariables(method)){
@@ -378,7 +385,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
             }
 
-            if (arg_type.equals("") && Objects.equals(temp.getJmmChild(0).getKind(), "Integer")){
+            if (arg_type.equals("") && (Objects.equals(temp.getJmmChild(0).getKind(), "Integer")
+            || Objects.equals(temp.getJmmChild(0).getKind(),"Length"))){
                 arg_type += ".i32";
             }
 
