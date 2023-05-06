@@ -40,6 +40,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         addVisit("Assignment", this::dealWithAssignments);
         addVisit("BinaryOp", this::dealWithBinaryOp);
         addVisit("MethodCalls", this::dealWithMethodInvocation);
+        addVisit("While", this::dealWithWhile);
         addVisit("ExprStmt", this::dealWithExprStmt);
         addVisit("Return", this::dealWithReturn);
     }
@@ -119,13 +120,24 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
 
     private String getOptype(String op){
-        if (op.equals("+") | op.equals("-") | op.equals("*") | op.equals("/") | op.equals("%")){
+        if (op.equals("+") || op.equals("-") || op.equals("*") || op.equals("/") || op.equals("%")){
             return ".i32";
         }
-        else if (op.equals("&&") | op.equals("||") | op.equals("^")){
+        else if (op.equals("&&") || op.equals("||") | op.equals("^") || op.equals("<") || op.equals(">") ||
+        op.equals("<=") || op.equals(">=")){
             return ".bool";
         }
         return "";
+    }
+
+    private String getReverse(String op){
+        return switch (op) {
+            case ">" -> "<=";
+            case "<" -> ">=";
+            case ">=" -> "<";
+            case "<=" -> ">";
+            default -> "";
+        };
     }
 
     private boolean isInvokeVirtual(String method_name){
@@ -233,7 +245,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         String method_type = getType(symbolTable.getReturnType(method));
 
-        ollirCode += method_type+ "{\n";
+        ollirCode += method_type+ " {\n";
 
         for (JmmNode child :jmmNode.getChildren()){
             if (Objects.equals(child.getKind(), "MethodBody")){
@@ -250,6 +262,10 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                     else if (Objects.equals(c.getKind(), "ExprStmt")){
                         dealWithExprStmt(c,method);
                     }
+                    else if (Objects.equals(c.getKind(), "While")){
+                        dealWithWhile(c, method);
+                    }
+
                 }
             }
         }
@@ -408,6 +424,63 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         }
         return "";
     }
+
+    private String dealWithWhile(JmmNode jmmNode, String method){
+
+        JmmNode bin_op = jmmNode.getJmmChild(0);
+
+        String temp_op = bin_op.get("op");
+        String op;
+
+        Type op1_type = new Type("", false), op2_type = new Type("", false);
+        if (temp_op.equals("<") || temp_op.equals(">") || temp_op.equals("<=") || temp_op.equals(">=")){
+            op = getReverse(temp_op);
+        }
+        else {
+            op = temp_op;
+        }
+
+        for (Symbol var : symbolTable.getLocalVariables(method)){
+            if (var.getName().equals(bin_op.getJmmChild(0).get("value"))){
+                op1_type = var.getType();
+            }
+            if (var.getName().equals(bin_op.getJmmChild(1).get("value"))){
+                op2_type = var.getType();
+            }
+        }
+
+        ollirCode += "\t\tif (" + bin_op.getJmmChild(0).get("value") + getType(op1_type) + " " + op + getOptype(op)
+                + " " + bin_op.getJmmChild(1).get("value") + getType(op2_type) + ") goto ENDLOOP_1;\n";
+        ollirCode += "\t\tBODY_0:\n";
+
+        if (Objects.equals(jmmNode.getJmmChild(1).getKind(), "NestedStatements")){
+            for (JmmNode c : jmmNode.getJmmChild(1).getChildren()){
+
+                if (Objects.equals(c.getKind(), "Assignment")){
+                    dealWithAssignments(c, method);
+                }
+                else if (Objects.equals(c.getKind(), "Return")){
+                    dealWithReturn(c, method);
+                } else if (Objects.equals(c.getKind(), "BinaryOp")) {
+                    dealWithBinaryOp(c, method);
+                } else if (Objects.equals(c.getKind(), "ExprStmt")) {
+                    dealWithExprStmt(c, method);
+                } else if (Objects.equals(c.getKind(), "MethodCalls")) {
+                    dealWithMethodInvocation(c, method);
+                }
+            }
+        }
+
+        ollirCode += "\t\tif (" + bin_op.getJmmChild(0).get("value") + getType(op1_type) + " " + temp_op +
+                getOptype(op) + " " + bin_op.getJmmChild(1).get("value") + getType(op2_type)
+                + ") goto BODY_0;\n";
+
+
+        ollirCode += "\t\tEND_LOOP_1:\n";
+
+        return "";
+    }
+
 
     private String dealWithBinaryOp(JmmNode jmmNode, String method){
 

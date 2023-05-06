@@ -1,18 +1,17 @@
-import io;
+import ioPlus;
+class SimpleWhileStat {
 
-class CompileMethodInvocation {
 
-    public static void main(String[] args) {
+    public int func(int a){
+        int c;
+        int i;
+        i = 0;
 
+        while (i < a) {
+            i = i + 1;
+        }
+
+        return i;
     }
 
-    public int foo() {
-        int a;
-
-        a = 1;
-
-        io.println(a);
-
-        return 0;
-    }
 }
