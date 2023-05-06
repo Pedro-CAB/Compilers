@@ -23,9 +23,7 @@ public class Jasmin implements JasminBackend {
         classUnit = ollirResult.getOllirClass();
         if (classUnit == null) return null;
 
-        StringBuilder jasminCode = new StringBuilder("\n");
-        stackLimit = 0;
-        currentStack = 0;
+        StringBuilder jasminCode = new StringBuilder("");
         numCond = 0;
 
         // Add class declaration
@@ -61,6 +59,9 @@ public class Jasmin implements JasminBackend {
 
         // Add methods
         for (Method method : classUnit.getMethods()) {
+            stackLimit = 0;
+            currentStack = 0;
+
             if (method.isConstructMethod()) {
                 jasminCode.append("\n.method public <init>()V\n\taload_0\n\tinvokenonvirtual ");
                 if (classUnit.getSuperClass() != null) jasminCode.append(getClassFullName(classUnit.getSuperClass()));
@@ -128,8 +129,7 @@ public class Jasmin implements JasminBackend {
         StringBuilder s = new StringBuilder();
         Operand op = (Operand) assignInstruction.getDest();
 
-        if (op.getType().getTypeOfElement() == ElementType.ARRAYREF) {
-            ArrayOperand arrayOp = (ArrayOperand) op;
+        if (op instanceof ArrayOperand arrayOp) {
             if (arrayOp.isParameter()) s.append("\taload ").append(arrayOp.getParamId()).append("\n\t");
             else {
                 Descriptor d;
@@ -603,6 +603,7 @@ public class Jasmin implements JasminBackend {
             }
 
             s.append("\t").append(load(result));
+            s.append("\t").append(instruction).append("\n");
             stackLimit = Math.max(stackLimit, currentStack);
         } else {
             s.append("\t").append(load(leftOp)).append("\t").append(load(rightOp));
