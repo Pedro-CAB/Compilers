@@ -1,17 +1,17 @@
 import ioPlus;
-class SimpleWhileStat {
+class SimpleIfElseStat {
 
 
-    public int func(int a){
-        int c;
-        int i;
-        i = 0;
+    public int func(int a, int b){
+		int result;
 
-        while (i < a) {
-            i = i + 1;
+        if(a < b){
+          result = a;
+        } else {
+			result = b;
         }
 
-        return i;
+        return result;
     }
 
 }

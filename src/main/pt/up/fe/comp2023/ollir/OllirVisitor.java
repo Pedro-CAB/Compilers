@@ -25,6 +25,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     int tempIndex = 1;
 
+    int dollarIndex = 1;
+
     public String getOllirCode() {
         return ollirCode;
     }
@@ -41,6 +43,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         addVisit("BinaryOp", this::dealWithBinaryOp);
         addVisit("MethodCalls", this::dealWithMethodInvocation);
         addVisit("While", this::dealWithWhile);
+        addVisit("IfElse", this::dealWithIfElse);
         addVisit("ExprStmt", this::dealWithExprStmt);
         addVisit("Return", this::dealWithReturn);
     }
@@ -115,7 +118,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
-        return getParamType(val, method) + getFieldType(val) + getLocalType(val, method);
+        if (!getParamType(val, method).equals("")){
+            return getParamType(val, method);
+        }
+
+        return  getFieldType(val) + getLocalType(val, method);
     }
 
 
@@ -264,6 +271,9 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                     }
                     else if (Objects.equals(c.getKind(), "While")){
                         dealWithWhile(c, method);
+                    }
+                    else if (Objects.equals(c.getKind(), "IfElse")){
+                        dealWithIfElse(c, method);
                     }
 
                 }
@@ -481,6 +491,76 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
+    private String dealWithIfElse(JmmNode jmmNode, String method){
+
+        String op = jmmNode.getJmmChild(0).get("op");
+
+        String op_type = getOptype(op);
+
+        JmmNode op1 = jmmNode.getJmmChild(0).getJmmChild(0);
+
+        String op1_type = findType(op1, method);
+
+        JmmNode op2 = jmmNode.getJmmChild(0).getJmmChild(1);
+
+        String op2_type = findType(op2, method);
+
+
+
+        ollirCode += "\t\tif ($" + dollarIndex + "." + op1.get("value") + op1_type + " " + op + op_type + " ";
+
+        dollarIndex++;
+
+        ollirCode += "$" + dollarIndex + "." + op2.get("value") + op2_type + ") goto THEN_0;\n";
+
+        // Else part
+
+        JmmNode els = jmmNode.getJmmChild(2);
+
+        for (JmmNode else_children : els.getChildren()){
+            if (Objects.equals(else_children.getKind(), "Assignment")){
+                dealWithAssignments(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "While")) {
+                dealWithWhile(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "Return")) {
+                dealWithReturn(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "MethodCalls")) {
+                dealWithMethodInvocation(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "BinaryOp")) {
+                dealWithBinaryOp(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "ExprStmt")) {
+                dealWithExprStmt(else_children, method);
+            }
+        }
+
+        ollirCode += "\t\tgoto ENDIF_1;\n";
+
+        ollirCode +="\t\tTHEN_0:\n";
+
+        // If part
+
+        JmmNode if_part = jmmNode.getJmmChild(2);
+
+        for (JmmNode if_children : if_part.getChildren()){
+            if (Objects.equals(if_children.getKind(), "Assignment")){
+                dealWithAssignments(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "While")) {
+                dealWithWhile(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "Return")) {
+                dealWithReturn(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "MethodCalls")) {
+                dealWithMethodInvocation(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "BinaryOp")) {
+                dealWithBinaryOp(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "ExprStmt")) {
+                dealWithExprStmt(if_children, method);
+            }
+        }
+
+        ollirCode += "\t\tENDIF_1:\n";
+
+        return "";
+    }
 
     private String dealWithBinaryOp(JmmNode jmmNode, String method){
 
