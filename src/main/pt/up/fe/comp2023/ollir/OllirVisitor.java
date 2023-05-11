@@ -491,8 +491,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
-    private String dealWithIfElse(JmmNode jmmNode, String method){
-
+    private void binOpInIfElse(JmmNode jmmNode, String method){
         String op = jmmNode.getJmmChild(0).get("op");
 
         String op_type = getOptype(op);
@@ -539,7 +538,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         // If part
 
-        JmmNode if_part = jmmNode.getJmmChild(2);
+        JmmNode if_part = jmmNode.getJmmChild(1);
 
         for (JmmNode if_children : if_part.getChildren()){
             if (Objects.equals(if_children.getKind(), "Assignment")){
@@ -558,6 +557,76 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         }
 
         ollirCode += "\t\tENDIF_1:\n";
+    }
+
+    private void identInIfElse(JmmNode jmmNode, String method){
+
+        JmmNode val = jmmNode.getJmmChild(0);
+
+        String val_type = findType(val, method);
+
+        ollirCode += "\t\tif (" + val.get("value") + val_type + ") goto THEN_0;\n";
+
+        // Else part
+
+        JmmNode els = jmmNode.getJmmChild(2);
+
+        for (JmmNode else_children : els.getChildren()){
+            if (Objects.equals(else_children.getKind(), "Assignment")){
+                dealWithAssignments(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "While")) {
+                dealWithWhile(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "Return")) {
+                dealWithReturn(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "MethodCalls")) {
+                dealWithMethodInvocation(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "BinaryOp")) {
+                dealWithBinaryOp(else_children, method);
+            } else if (Objects.equals(else_children.getKind(), "ExprStmt")) {
+                dealWithExprStmt(else_children, method);
+            }
+        }
+
+        ollirCode += "\t\tgoto ENDIF_1;\n";
+
+        ollirCode +="\t\tTHEN_0:\n";
+
+        // If part
+
+        JmmNode if_part = jmmNode.getJmmChild(1);
+
+        for (JmmNode if_children : if_part.getChildren()){
+            if (Objects.equals(if_children.getKind(), "Assignment")){
+                dealWithAssignments(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "While")) {
+                dealWithWhile(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "Return")) {
+                dealWithReturn(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "MethodCalls")) {
+                dealWithMethodInvocation(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "BinaryOp")) {
+                dealWithBinaryOp(if_children, method);
+            } else if (Objects.equals(if_children.getKind(), "ExprStmt")) {
+                dealWithExprStmt(if_children, method);
+            }
+        }
+
+        ollirCode += "\t\tENDIF_1:\n";
+
+
+    }
+
+    private String dealWithIfElse(JmmNode jmmNode, String method){
+
+
+        for (JmmNode child : jmmNode.getChildren()){
+            if (Objects.equals(child.getKind(), "BinaryOp")){
+                binOpInIfElse(jmmNode, method);
+            }
+            else if (Objects.equals(child.getKind(), "Identifier")){
+                identInIfElse(jmmNode, method);
+            }
+        }
 
         return "";
     }

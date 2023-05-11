@@ -1,17 +1,15 @@
-import ioPlus;
-class SimpleIfElseStat {
+import io;
 
+class Arithmetic_less {
+	public static void main(String[] args) {
+		boolean a;
 
-    public int func(int a, int b){
-		int result;
+		a = 10 < 20;
 
-        if(a < b){
-          result = a;
-        } else {
-			result = b;
-        }
-
-        return result;
-    }
-
+		if(a) {
+			io.print(1);
+		} else {
+			io.print(0);
+		}
+	}
 }
