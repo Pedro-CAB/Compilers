@@ -7,9 +7,7 @@ class AssumeExtendedMethods extends B{
     }
 
     public int foo() {
-        B.something(1,2,3);
-        AssumeExtendedMethods a;
-        a.something(1,2,3);
-        return a.something(1,2,3);
+        this.something(1,2,3);
+        return 0;
     }
 }

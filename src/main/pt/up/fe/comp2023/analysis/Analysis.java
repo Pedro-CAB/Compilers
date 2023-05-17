@@ -387,14 +387,14 @@ public class Analysis implements JmmAnalysis {
                 if(isMethodStatic){
                     reports.add(createReport(child,"'this' cannot be used in a static method."));
                 }
-                else if(!table.getMethods().contains(calledMethodName)){
+                else if(!table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(),"")){
                     reports.add(createReport(child,"Method " + calledMethodName + " was not declared."));
                 }
                 break;
         }
-        List<Symbol> expectedParameters = table.getParameters(calledMethodName);
-        List<String> receivedTypes = getTypeOfArgs(root.getJmmChild(1));
         if(Objects.equals(calledOver, table.getClassName())) {
+            List<Symbol> expectedParameters = table.getParameters(calledMethodName);
+            List<String> receivedTypes = getTypeOfArgs(root.getJmmChild(1));
             if (expectedParameters == null){
                 if (receivedTypes.size() > 0) {
                     reports.add(createReport(root, calledMethodName + " doesn't take any arguments but received" + receivedTypes.size() + "."));
