@@ -1,17 +1,18 @@
-import io;
+import A;
 
-class CompileMethodInvocation {
+class CallToMethodAssumedInImport extends A {
 
     public static void main(String[] args) {
 
     }
 
     public int foo() {
-        int a;
+        A a;
+        a = new A();
 
-        a = 1;
-
-        io.println(a);
+        // Assume bar() is in A
+        a.bar();
+        A.something();
 
         return 0;
     }

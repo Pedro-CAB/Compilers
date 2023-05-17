@@ -76,7 +76,13 @@ public class Analysis implements JmmAnalysis {
      * @return
      */
     private Boolean isContainedInImports(String className, List<String> imports) {
-        return imports.contains("import " + className + ";\n");
+        if(imports.size() == 0) return false;
+        for (String imported : imports){
+            if (("import " + className + ";\n").equals(imported)){
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -142,6 +148,10 @@ public class Analysis implements JmmAnalysis {
             case "!=":
             case ">=":
             case "<=":
+                if (!Objects.equals(firstType, "int") || !Objects.equals(secondType, "int"))
+                    result = "invalid_type";
+                else result = "boolean";
+                break;
             case "+":
             case "-":
             case "*":
@@ -249,6 +259,7 @@ public class Analysis implements JmmAnalysis {
                 if (!Objects.equals(firstType, "boolean") || !Objects.equals(secondType, "boolean")) {
                     reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'boolean'."));
                 }
+                break;
                 //Bitwise Operators (Can only be used between ints)
             case "&":
             case "|":
@@ -256,6 +267,7 @@ public class Analysis implements JmmAnalysis {
                 if (!Objects.equals(firstType, "int") || !Objects.equals(secondType, "int")) {
                     reports.add(createReport(node, "Cannot use '" + operator + "' between '" + firstType + "' and '" + secondType + "'. Both should be 'int'."));
                 }
+                break;
             default:
                 System.out.println("OP TYPE NAO CONTABILIZADO EM visitBinaryOP : " + node.get("op"));
         }
@@ -357,15 +369,17 @@ public class Analysis implements JmmAnalysis {
         JmmNode child = root.getJmmChild(0);
         String childKind = child.getKind();
         String calledMethodName = root.getJmmChild(1).get("methodName");
-        String methodClassName = getVarType(root.getChildren().get(0).get("value"));
+        String calledOver = root.getJmmChild(0).get("value");
         switch (childKind) {
             case "Identifier":
                 String className = table.getClassName();
                 List<String> imports = table.getImports();
-                if (!isContainedInImports(methodClassName, imports) && !Objects.equals(methodClassName, className)) {
-                    reports.add(createReport(root, "Class " + methodClassName + " doesn't exist. Maybe you should have imported it?"));
+                if (getVarType(calledOver) == null){
+                    if (!isContainedInImports(calledOver, imports) && !Objects.equals(calledOver, className)) {
+                        reports.add(createReport(root, calledOver + " doesn't exist. Maybe you forgot to import a class or define a variable?"));
+                    }
                 }
-                if (Objects.equals(methodClassName, className) && !table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(), "")) {
+                if (Objects.equals(calledOver, className) && !table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(), "")) {
                     reports.add(createReport(root, "Method " + calledMethodName + " is not declared."));
                 }
                 break;
@@ -380,7 +394,7 @@ public class Analysis implements JmmAnalysis {
         }
         List<Symbol> expectedParameters = table.getParameters(calledMethodName);
         List<String> receivedTypes = getTypeOfArgs(root.getJmmChild(1));
-        if(Objects.equals(methodClassName, table.getClassName())) {
+        if(Objects.equals(calledOver, table.getClassName())) {
             if (expectedParameters == null){
                 if (receivedTypes.size() > 0) {
                     reports.add(createReport(root, calledMethodName + " doesn't take any arguments but received" + receivedTypes.size() + "."));
@@ -446,8 +460,12 @@ public class Analysis implements JmmAnalysis {
                     String message = "Variable " + root.get("var") + " does not exist.";
                     reports.add(createReport(root, message));
                 } else if (!Objects.equals(varType, assignType)) {
-                    String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
-                    reports.add(createReport(root, message));
+                    System.out.println(varType + " assigned to " + assignType);
+                    System.out.println(table.getClassName() + " assigned to " + table.getSuper());
+                    if((!varType.equals(table.getClassName()) && !Objects.equals(assignType, table.getSuper())) && (!Objects.equals(assignType, table.getClassName()) && !varType.equals(table.getSuper()))) {
+                        String message = "Assignment between a '" + varType + "' and a '" + assignType + "'.";
+                        reports.add(createReport(root, message));
+                    }
                 }
                 break;
             case "ArrayAcess":
@@ -745,18 +763,25 @@ public class Analysis implements JmmAnalysis {
     private List<Report> visitIfElse(List<Report> reports, JmmNode node) {
         JmmNode condition = node.getJmmChild(0), ifNode = node.getJmmChild(1), elseNode = null;
         if(node.getChildren().size() == 3) elseNode = node.getJmmChild(2);
+        String conditionType;
         switch(condition.getKind()){
             case "Boolean":
                 break;
             case "BinaryOp":
-                String conditionType = getTypeOfBinaryOp(condition);
+                conditionType = getTypeOfBinaryOp(condition);
                 if (!Objects.equals(conditionType, "boolean") && conditionType != "invalid_type")
                     reports.add(createReport(condition,"Expected a 'boolean' inside If condition but received a '" + conditionType + "'."));
                 else if (conditionType == "invalid_type")
                     reports.addAll(visitBinaryOp(reports,condition));
                 break;
+            case "Identifier":
+                conditionType = getVarType(node.getJmmChild(0).get("value"));
+                if (!Objects.equals(conditionType, "boolean") && conditionType != "invalid_type")
+                    reports.add(createReport(condition,"Expected a 'boolean' inside If condition but received a '" + conditionType + "'."));
+                break;
             default:
                 reports.add(createReport(condition,"Expected a 'boolean' inside If Condition."));
+                break;
         }
         reports.addAll(visitMethodBody(reports,ifNode));
         if (node.getChildren().size() == 3) reports.addAll(visitMethodBody(reports,elseNode));
