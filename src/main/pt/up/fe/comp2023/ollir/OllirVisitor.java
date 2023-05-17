@@ -27,6 +27,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     int dollarIndex = 1;
 
+    int ifIndex = 0;
+
     public String getOllirCode() {
         return ollirCode;
     }
@@ -124,6 +126,30 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         return  getFieldType(val) + getLocalType(val, method);
     }
+
+    String findArray(String method){
+        for (Symbol local_var : symbolTable.getLocalVariables(method)){
+            if (local_var.getType().isArray()){
+                return local_var.getName() + getType(local_var.getType());
+            }
+        }
+
+        for (Symbol field : symbolTable.getFields()){
+            if (field.getType().isArray()){
+                return field.getName() + getType(field.getType());
+            }
+        }
+
+        for (Symbol param : symbolTable.getParameters(method)){
+            if (param.getType().isArray()){
+                return param.getName() + getType(param.getType());
+            }
+        }
+
+
+        return "";
+    }
+
 
 
     private String getOptype(String op){
@@ -353,7 +379,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 ollirCode += type + " :=" + type + " " + val + type + ";\n";
             }
             case ".bool" -> ollirCode += type + " :=" + type + " 0.bool;\n";
-            case ".array.i32" -> ollirCode += type + ":=" + type + " new(array)" + type + ";\n";
+            case ".array.i32" ->{
+                String length = jmmNode.getJmmChild(0).getJmmChild(1).get("value");
+
+                ollirCode += type + ":=" + type + " new(array, " + length + ".i32" + ")" + type + ";\n";
+            }
             default -> {
                 ollirCode += type + " :=" + type + " new(" + local_var.getType().getName() + ")" + type + ";\n";
                 ollirCode += "\t\tinvokespecial(" + local_var.getName() + type + ",\"<init>\").V;\n";
@@ -377,6 +407,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         String method_name = method_aux.get("methodName");
         String method_arg = "";
 
+
         String object = jmmNode.getJmmChild(0).get("value");
 
         String object_type = "";
@@ -398,6 +429,16 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             else{
                 method_arg = temp.getJmmChild(0).getKind();
             }
+
+            if (method_arg.equals("Length")){
+                    method_arg = "temp_" + tempIndex;
+
+                    String array = findArray(method);
+
+                    ollirCode += "\t\t"+ method_arg + ".i32 :=.i32 " + "arraylength("  + array +  ").i32;\n";
+            }
+
+
             method_sup = jmmNode.getJmmChild(0).get("value");
 
             for (Symbol symbol : symbolTable.getLocalVariables(method)){
@@ -432,6 +473,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                         symbolTable.getReturnType(method_name)) + ";\n";
             }
         }
+
+        tempIndex ++;
         return "";
     }
 
@@ -510,7 +553,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         dollarIndex++;
 
-        ollirCode += "$" + dollarIndex + "." + op2.get("value") + op2_type + ") goto THEN_0;\n";
+        ollirCode += "$" + dollarIndex + "." + op2.get("value") + op2_type + ") goto THEN_" + dollarIndex + ";\n";
 
         // Else part
 
@@ -532,9 +575,10 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
-        ollirCode += "\t\tgoto ENDIF_1;\n";
 
-        ollirCode +="\t\tTHEN_0:\n";
+        ollirCode += "\t\tgoto ENDIF_" + ifIndex++ + ";\n";
+
+        ollirCode +="\t\tTHEN_" + ifIndex + ":\n";
 
         // If part
 
@@ -556,7 +600,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
-        ollirCode += "\t\tENDIF_1:\n";
+        ollirCode += "\t\tENDIF_" + ifIndex++ + ":\n";
     }
 
     private void identInIfElse(JmmNode jmmNode, String method){
@@ -565,7 +609,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         String val_type = findType(val, method);
 
-        ollirCode += "\t\tif (" + val.get("value") + val_type + ") goto THEN_0;\n";
+        ollirCode += "\t\tif (" + val.get("value") + val_type + ") goto THEN_"+ ifIndex + ";\n";
 
         // Else part
 
@@ -587,9 +631,9 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
-        ollirCode += "\t\tgoto ENDIF_1;\n";
+        ollirCode += "\t\tgoto ENDIF_" + ifIndex++ + ";\n";
 
-        ollirCode +="\t\tTHEN_0:\n";
+        ollirCode +="\t\tTHEN_" + ifIndex + ":\n";
 
         // If part
 
@@ -611,7 +655,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
-        ollirCode += "\t\tENDIF_1:\n";
+        ollirCode += "\t\tENDIF_" + ifIndex++ + ":\n";
 
 
     }
@@ -626,7 +670,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             else if (Objects.equals(child.getKind(), "Identifier")){
                 identInIfElse(jmmNode, method);
             }
+
+            ifIndex++;
         }
+
+
 
         return "";
     }
