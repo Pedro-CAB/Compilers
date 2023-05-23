@@ -60,14 +60,14 @@ public class Launcher {
         System.out.println(parserResult.getRootNode().toTree());
 
         // ... add remaining stages
-        //Analysis analysis = new Analysis();
+        Analysis analysis = new Analysis();
         Jasmin jasmin = new Jasmin();
 
         System.out.println("\n\nPrinting Symbol Table\n");
 
-        //JmmSemanticsResult result = new Analysis().semanticAnalysis(parserResult); analysis.semanticAnalysis(parserResult);
+        JmmSemanticsResult result = new Analysis().semanticAnalysis(parserResult); analysis.semanticAnalysis(parserResult);
 
-        JmmSemanticsResult result = new JmmSemanticsResult(parserResult.getRootNode(), table, parserResult.getReports(), parserResult.getConfig());
+        //JmmSemanticsResult result = new JmmSemanticsResult(parserResult.getRootNode(), table, parserResult.getReports(), parserResult.getConfig());
 
         OllirResult ollirResult = new Ollir().toOllir(result);
 
@@ -95,3 +95,4 @@ public class Launcher {
         return config;
     }
 }
+
