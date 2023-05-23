@@ -109,7 +109,7 @@ expression
     | value=INT #Integer
     | value=ID #Identifier
     | value=('true' | 'false') #Boolean
-    | expression ('[' expression ']')+ #ArrayAcess
+    | expression ('[' expression ']')+ #ArrayAccess
     | value='this' #Self
     | className=expression methodCall+  #MethodCalls
     ;

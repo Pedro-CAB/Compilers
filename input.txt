@@ -1,15 +1,27 @@
-import B;
+import ioPlus;
+class ComplexArrayAccess {
 
-class AssumeExtendedMethods extends B{
-
-    public static void main(String[] args) {
-
+    public int func(int a) {
+        return a;
     }
 
-    public int foo() {
-        B.something(1,2,3);
-        AssumeExtendedMethods a;
-        a.something(1,2,3);
-        return a.something(1,2,3);
-    }
+	public static void main(String[] args) {
+	    int[] a;
+        int i;
+        ComplexArrayAccess d;
+        d = new ComplexArrayAccess();
+        a = new int[5];
+        a[0] = 1;
+		a[1] = 2;
+		a[2] = 3;
+		a[3] = 4;
+		a[4] = 5;
+        i = 1;
+        ioPlus.printResult(a[d.func(0)]);
+        ioPlus.printResult(a[i]);
+        ioPlus.printResult(a[4/2]);
+        ioPlus.printResult(a[a[2]]);
+        ioPlus.printResult(a[a.length -1 ]);
+
+	}
 }
