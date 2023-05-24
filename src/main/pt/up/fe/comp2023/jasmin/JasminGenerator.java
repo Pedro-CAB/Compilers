@@ -136,7 +136,8 @@ public class JasminGenerator implements JasminBackend {
 
         this.setStringBuilder(sub);
 
-        this.addLine("\t" + ".limit stack " + this.stackLimit);
+        this.addLine("\t.limit stack " + this.stackLimit);
+        this.addLine("\t.limit locals " + this.vars.size() + (method.getVarTable().containsKey("this") || method.isStaticMethod() ? 0 : 1));
         this.jasminCode.append(methodBody);
         this.addLine(".end method");
     }
