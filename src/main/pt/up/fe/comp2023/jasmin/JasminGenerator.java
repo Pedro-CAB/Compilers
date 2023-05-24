@@ -137,7 +137,7 @@ public class JasminGenerator implements JasminBackend {
         this.setStringBuilder(sub);
 
         this.addLine("\t.limit stack " + this.stackLimit);
-        this.addLine("\t.limit locals " + this.vars.size() + (method.getVarTable().containsKey("this") || method.isStaticMethod() ? 0 : 1));
+        this.addLine("\t.limit locals " + (this.vars.size() + (method.getVarTable().containsKey("this") || method.isStaticMethod() ? 0 : 1)));
         this.jasminCode.append(methodBody);
         this.addLine(".end method");
     }
@@ -581,29 +581,26 @@ public class JasminGenerator implements JasminBackend {
     }
 
     private boolean checkAssignIINC(String destName, int reg, Instruction instr, String tabs) {
-        // only works for ADD or SUB
         if (instr.getInstType() != InstructionType.BINARYOPER)
             return false;
 
         BinaryOpInstruction binaryOpInstruction = (BinaryOpInstruction) instr;
         Operation op = binaryOpInstruction.getOperation();
+
         if (op.getOpType() != OperationType.ADD && op.getOpType() != OperationType.SUB)
             return false;
 
         Element leftElem = binaryOpInstruction.getLeftOperand();
         Element rightElem = binaryOpInstruction.getRightOperand();
 
-        // one of the operands needs to be a variable and the other a number
         if (leftElem.isLiteral() && rightElem.isLiteral())
             return false;
         if (!leftElem.isLiteral() && !rightElem.isLiteral())
             return false;
 
-        // check which is the var and which is the int
         String usedName;
         int val;
         if (leftElem.isLiteral()) {
-            // subtracting the variable is not an inc
             if (op.getOpType() == OperationType.SUB)
                 return false;
 
@@ -614,15 +611,12 @@ public class JasminGenerator implements JasminBackend {
             usedName = this.callArg(leftElem);
         }
 
-        // only applicable when the dest var is the same as the used variable
         if (!usedName.equals(destName))
             return false;
 
-        // on subs we invert the const
         if (op.getOpType() == OperationType.SUB)
             val *= -1;
 
-        // skip increments by 0/-0
         if (val == 0)
             return true;
 
@@ -667,12 +661,13 @@ public class JasminGenerator implements JasminBackend {
                 ArrayType arrayType = (ArrayType) type;
                 s += "[" + getType(arrayType.getElementType());
             }
-            case OBJECTREF, THIS -> s = "A";
             case CLASS -> {
                 ClassType classType = (ClassType) type;
                 s = "L" + classType.getName() + ";";
             }
             case STRING -> s = "Ljava/lang/String;";
+            case OBJECTREF -> s = "a";
+            case THIS -> s = this.classUnit.getClassName();
             case VOID -> s = "V";
         }
         return s;
@@ -700,7 +695,6 @@ public class JasminGenerator implements JasminBackend {
     }
 
     private String boolLiteralPush(int i) {
-        // IMP this negates the given argument
         return this.boolLiteralPush(i == 0);
     }
 
