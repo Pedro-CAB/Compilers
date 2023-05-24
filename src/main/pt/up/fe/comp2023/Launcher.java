@@ -56,12 +56,17 @@ public class Launcher {
 
         JmmSemanticsResult result = new Analysis().semanticAnalysis(parserResult);analysis.semanticAnalysis(parserResult);
 
-        OllirResult ollirResult = new Ollir().toOllir(result);
+        if(result.getReports().size() > 0){
+            System.out.println("Semantic Errors were detected. Aborting execution...");
+        }
+        else {
+            OllirResult ollirResult = new Ollir().toOllir(result);
 
-        System.out.println("ollirResult: " + ollirResult.getOllirCode());
+            System.out.println("ollirResult: " + ollirResult.getOllirCode());
 
-        JasminResult jasminResult = new Jasmin().toJasmin(ollirResult);
-        System.out.println("jasminResult:\n" + jasminResult.getReports());
+            JasminResult jasminResult = new Jasmin().toJasmin(ollirResult);
+            System.out.println("jasminResult:\n" + jasminResult.getReports());
+        }
     }
 
     private static Map<String, String> parseArgs(String[] args) {
