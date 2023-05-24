@@ -155,11 +155,10 @@ public class JasminGenerator implements JasminBackend {
         if (method.isFinalMethod()) s.append("final ");
         s.append(method.getMethodName()).append("(");
 
-        ArrayList<Element> params = method.getParams();
-        for (int i = 0; i < params.size(); i++) {
-            s.append(getType(params.get(i).getType()));
-            if (i != (params.size() - 1)) s.append(";");
+        for(Element element : method.getParams()){
+            s.append(getType(element.getType()));
         }
+
         s.append(")").append(getType(method.getReturnType()));
 
         return s;
@@ -662,20 +661,19 @@ public class JasminGenerator implements JasminBackend {
     private String getType(Type type) {
         String s = "";
         switch (type.getTypeOfElement()) {
-            case INT32 -> s += "I";
-            case BOOLEAN -> s += "Z";
+            case INT32 -> s = "I";
+            case BOOLEAN -> s = "Z";
             case ARRAYREF -> {
                 ArrayType arrayType = (ArrayType) type;
                 s += "[" + getType(arrayType.getElementType());
             }
-            case OBJECTREF -> s += "a";
+            case OBJECTREF, THIS -> s = "A";
             case CLASS -> {
                 ClassType classType = (ClassType) type;
-                s += "L" + classType.getName();
+                s = "L" + classType.getName() + ";";
             }
-            case THIS -> s += "A";
-            case STRING -> s += "Ljava/lang/String;";
-            case VOID -> s += "V";
+            case STRING -> s = "Ljava/lang/String;";
+            case VOID -> s = "V";
         }
         return s;
     }
