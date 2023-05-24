@@ -7,7 +7,7 @@ class ComplexArrayAccess {
 
 	public static void main(String[] args) {
         int i;
-        i = 9 + 4 - 3;
+        i = 9 / 4 / 3;
 
 	}
 }

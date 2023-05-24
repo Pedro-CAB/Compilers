@@ -462,7 +462,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             if (Objects.equals(child.getKind(), "BinaryOp")){
                 dealWithBinaryOp(child, s);
                 String t = getType(local_var.getType());
-                ollirCode += "\t\t" + local_var.getName() + t + " :=" + t+ " t" + tempIndex + t + ";\n";
+                ollirCode += "\t\t" + local_var.getName() + t + " :=" + t+ " temp_" + tempIndex + t + ";\n";
                 return "";
             }
         }
