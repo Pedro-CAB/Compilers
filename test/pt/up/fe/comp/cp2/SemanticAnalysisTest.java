@@ -131,4 +131,34 @@ public class SemanticAnalysisTest {
                 .analyse(SpecsIo.getResource("pt/up/fe/comp/cp2/semanticanalysis/AssumeArguments.jmm"));
         TestUtils.noErrors(result);
     }
+
+    //THE TESTS BELOW WERE MADE BY US:
+
+    @Test
+    public void ourComparationReturnsBoolean(){
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp2/semanticanalysis/ourComparationReturnsBoolean.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void ourAssignToSuper(){
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp2/semanticanalysis/ourAssignToSuper.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void ourAssumeExtendedMethods(){
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp2/semanticanalysis/ourAssumeExtendedMethods.jmm"));
+        TestUtils.noErrors(result);
+    }
+
+    @Test
+    public void ourAssumeThisExtendedMethods(){
+        var result = TestUtils
+                .analyse(SpecsIo.getResource("pt/up/fe/comp/cp2/semanticanalysis/ourAssumeThisExtendedMethods.jmm"));
+        TestUtils.noErrors(result);
+    }
 }
