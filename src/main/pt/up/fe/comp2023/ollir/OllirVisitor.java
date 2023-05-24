@@ -863,13 +863,28 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     }
 
+
     private String dealWithBinaryOp(JmmNode jmmNode, String method){
 
         JmmNode child_1 = jmmNode.getJmmChild(0);
         JmmNode child_2 = jmmNode.getJmmChild(1);
 
-        if (Objects.equals(child_1.getKind(), "BinaryOp"))
+        Optional<JmmNode> ret = jmmNode.getAncestor("Return");
+        Optional<JmmNode> assign = jmmNode.getAncestor("Assignment");
+
+        String op_type = getOptype(jmmNode.get("op"));
+
+
+        if (Objects.equals(child_1.getKind(), "BinaryOp")){
+
             dealWithBinaryOp(child_1, method);
+
+            assign.ifPresent(node -> ollirCode += "\t\t" + node.get("var") + op_type + ":=" + op_type + " " +
+                    "temp_" + tempIndex + op_type + " " + jmmNode.get("op") + op_type + " " +
+                    child_2.get("value") + op_type + ";\n");
+
+        }
+
         else if (Objects.equals(child_1.getKind(), "Scope"))
             dealWithScope(child_1, method);
         else{
@@ -878,11 +893,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
             else if (Objects.equals(child_2.getKind(), "BinaryOp")){
                 dealWithBinaryOp(child_2, method);
-
-                Optional<JmmNode> ret = jmmNode.getAncestor("Return");
-                Optional<JmmNode> assign = jmmNode.getAncestor("Assignment");
-
-                String op_type = getOptype(jmmNode.get("op"));
 
                 if (ret.isPresent()){
                     ollirCode += "\t\ttemp_" + tempIndex + op_type + ":=" + op_type + " " +
@@ -895,20 +905,17 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                     tempIndex++;
                     ollirCode += "\t\ttemp_" + tempIndex + op_type + ":=" + op_type + " " +
                             child_1.get("value") + op_type + " " + jmmNode.get("op") + op_type + " " +
-                             tempIndex + op_type + ";\n";
+                            tempIndex + op_type + ";\n";
                 }
                 else{
                     ollirCode += "\t\t" + assign.get().get("var") + op_type + ":=" + op_type + " " +
                             child_1.get("value") + op_type + " " + jmmNode.get("op") + op_type + " " +
                             "temp_" + tempIndex + op_type + ";\n";
+
                 }
 
             }
             else{
-                Optional<JmmNode> ret = jmmNode.getAncestor("Return");
-                Optional<JmmNode> assign = jmmNode.getAncestor("Assignment");
-
-                String op_type = getOptype(jmmNode.get("op"));
 
                 if (ret.isPresent()){
                     ollirCode += "\t\ttemp_" + tempIndex + op_type + ":=" + op_type + " " +
@@ -922,14 +929,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                     child_1.get("value") + op_type + " " + jmmNode.get("op") + op_type + " " +
                     child_2.get("value") + op_type + ";\n";
                 }
-                else{
-                    ollirCode += "\t\t" + assign.get().get("var") + op_type + ":=" + op_type + " " +
-                            child_1.get("value") + op_type + " " + jmmNode.get("op") + op_type + " " +
-                            child_2.get("value") + op_type + ";\n";
-                }
+                else assign.ifPresent(node -> ollirCode += "\t\t" + node.get("var") + op_type + ":=" + op_type + " " +
+                        child_1.get("value") + op_type + " " + jmmNode.get("op") + op_type + " " +
+                        child_2.get("value") + op_type + ";\n");
             }
         }
-
 
         return "";
     }
