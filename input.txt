@@ -1,11 +1,15 @@
 import ioPlus;
-class ComplexArrayAccess {
+class ComplexArrayAccess{
 
 	public static void main(String[] args) {
-        int i;
-        i = 9 / 4 / 3;
 
-	public int(int a, String v) {
+	    int i;
+
+	    i = 1 + 2 / 3;
+
+    }
+
+	public int bla(int a, String v) {
 	    return a + 1;
 	}
 }
