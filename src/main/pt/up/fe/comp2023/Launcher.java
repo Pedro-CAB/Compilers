@@ -11,6 +11,7 @@ import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.comp2023.analysis.Analysis;
+import pt.up.fe.comp2023.jasmin.JasminGenerator;
 import pt.up.fe.comp2023.ollir.Ollir;
 import pt.up.fe.comp2023.symbol.table.Table;
 import pt.up.fe.comp2023.symbol.table.TableVisitor;
@@ -61,7 +62,6 @@ public class Launcher {
 
         // ... add remaining stages
         Analysis analysis = new Analysis();
-        Jasmin jasmin = new Jasmin();
 
         System.out.println("\n\nPrinting Symbol Table\n");
 
@@ -73,8 +73,8 @@ public class Launcher {
 
         System.out.println("ollirResult: " + ollirResult.getOllirCode());
 
-        JasminResult jasminResult = new Jasmin().toJasmin(ollirResult);
-        System.out.println("jasminResult:\n" + jasminResult.getReports());
+        JasminResult jasminResult = new JasminGenerator().toJasmin(ollirResult);
+        System.out.println("jasminResult:\n" + jasminResult.getJasminCode());
     }
 
     private static Map<String, String> parseArgs(String[] args) {
