@@ -3,8 +3,8 @@ import ioPlus;
 class ComplexArrayAccess {
 
 	public static void main(String[] args) {
-        int a = 1 + 2;
-	}
+        int i;
+        i = 9 / 4 / 3;
 
 	public MyClass getInt(int a, int b, int[] c, String d) {
 	    a = 1;
