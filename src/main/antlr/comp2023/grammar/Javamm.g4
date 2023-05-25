@@ -91,6 +91,7 @@ expression
     : '(' expression ')' #Scope
     | expression '.length'+ #Length
     | expression op=('++' | '--') #UnaryPostOp
+    | expression ('[' expression ']')+ #ArrayAccess
     | op=('++' | '--' | '+' | '-' | '!' | '~') expression #UnaryPreOp
     | expression op=('*' | '/' | '%') expression #BinaryOp
     | expression op=('+' | '-') expression #BinaryOp
@@ -109,7 +110,6 @@ expression
     | value=INT #Integer
     | value=ID #Identifier
     | value=('true' | 'false') #Boolean
-    | expression ('[' expression ']')+ #ArrayAccess
     | value='this' #Self
     | className=expression methodCall+  #MethodCalls
     ;
