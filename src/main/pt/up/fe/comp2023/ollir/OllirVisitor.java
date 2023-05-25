@@ -861,8 +861,9 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 dealWithArrayAccess(child, method);
                 tempIndex++;
             }
-            else if (index == jmmNode.getNumChildren() - 1 &&
+            if (index == jmmNode.getNumChildren() - 1 &&
                     Objects.equals(jmmNode.getJmmChild(index -1).getKind(), "ArrayAccess")){
+                dealWithArrayAccess(child, method);
                 tempIndex--;
                 ollirCode += "\t\ttemp_" + (tempIndex + 1) + ".i32 :=.i32 " + "temp_" + tempIndex + ".i32 " + jmmNode.get("op")
                 + getOptype(jmmNode.get("op")) + " ";
