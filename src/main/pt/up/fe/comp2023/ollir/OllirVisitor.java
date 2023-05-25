@@ -24,7 +24,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     int methodIndex = 0;
 
-    int tempIndex = 1;
+    int tempIndex = 0;
 
     int dollarIndex = 1;
 
@@ -389,11 +389,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         switch (index.getKind()) {
 
             case "Integer", "Identifier" -> {
-                ollirCode += "\t\ttemp_" + tempIndex + ".i32 :=.i32 " + index.get("value") + ".i32;\n";
-                tempIndex++;
 
-                previous = tempIndex - 1;
-                ollirCode += "\t\ttemp_" + tempIndex + ".i32 :=.i32 " + array_var + "[temp_" + previous + ".i32].i32;\n";
+                ollirCode += "\t\ttemp_" + tempIndex + ".i32 :=.i32 " + array_var + ".array.i32" + "[" +
+                        index.get("value") + ".i32].i32;\n";
+
+                tempIndex++;
             }
             case "MethodCalls" -> {
                 ollirCode += "\t\ttemp_" + tempIndex + ".i32 :=.i32 ";
@@ -439,11 +439,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         String array_var = jmmNode.get("var");
 
-        String index = "temp_" + localIndex + ".i32";
-
-        ollirCode += "\t\t" + index + " :=.i32 " + index_val + ".i32;\n";
-
-        ollirCode += "\t\t" + array_var + "[" + index + "].i32 :=.i32 " + assign_val +
+        ollirCode += "\t\t" + array_var + "[" + index_val  + ".i32].i32 :=.i32 " + assign_val +
                 findType(jmmNode.getJmmChild(1), method) + ";\n";
 
         localIndex++;
@@ -452,41 +448,42 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
     }
 
-
     private String dealWithAssignments(JmmNode jmmNode, String s){
 
         Symbol local_var = symbolTable.getLocalVariables(s).get(symbolTable.getLocalVariables(s).indexOf(getLocalVar(s, jmmNode.get("var"))));
 
 
         for (JmmNode child : jmmNode.getChildren()){
+            String t = getType(local_var.getType());
             if (Objects.equals(child.getKind(), "BinaryOp")){
                 dealWithBinaryOp(child, s);
-                String t = getType(local_var.getType());
                 ollirCode += "\t\t" + local_var.getName() + t + " :=" + t+ " temp_" + tempIndex + t + ";\n";
+                tempIndex++;
+                return "";
+            }
+            else if (Objects.equals(child.getKind(), "ArrayAccess")){
+                dealWithArrayAccess(child, s);
+                tempIndex--;
+                ollirCode += "\t\t" + local_var.getName() + t + " :=" + t+ " temp_" + tempIndex + t + ";\n";
+                tempIndex++;
                 return "";
             }
         }
 
-        ollirCode += "\t\t" + local_var.getName();
         String type;
 
         type = getType(local_var.getType());
 
+        ollirCode += "\t\t" + local_var.getName();
+
         switch (type) {
             case ".i32" -> {
 
-                if (Objects.equals(jmmNode.getJmmChild(0).getKind(), "ArrayAccess")){
-                    ollirCode += type + " :=" + type + " ";
-                    dealWithArrayAccess(jmmNode.getJmmChild(0), s);
-                    String method_arg = "temp_" + tempIndex + ".i32";
-
-                }
-                else{
+                if (!Objects.equals(jmmNode.getJmmChild(0).getKind(), "ArrayAccess")){
                     String val = jmmNode.getJmmChild(0).get("value");
                     ollirCode += type + " :=" + type + " " + val + type + ";\n";
+
                 }
-
-
             }
             case ".bool" -> ollirCode += type + " :=" + type + " 0.bool;\n";
             case ".array.i32" ->{
@@ -611,7 +608,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
             if (symbolTable.getParameters(method_name).size() > 0){
 
-                if (arg_type.equals("") && (Objects.equals(temp.getJmmChild(0).getKind(), "Integer")
+                if ((Objects.equals(temp.getJmmChild(0).getKind(), "Integer")
                         || Objects.equals(temp.getJmmChild(0).getKind(),"Length"))){
                     arg_type += ".i32";
                 }
@@ -860,18 +857,36 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         }
         if (Objects.equals(child.getKind(), "ArrayAccess") && jmmNode.getNumChildren() > 1){
 
-            dealWithArrayAccess(child, method);
-
+            if (index < jmmNode.getNumChildren() - 1) {
+                dealWithArrayAccess(child, method);
+                tempIndex++;
+            }
+            else if (index == jmmNode.getNumChildren() - 1 &&
+                    Objects.equals(jmmNode.getJmmChild(index -1).getKind(), "ArrayAccess")){
+                tempIndex--;
+                ollirCode += "\t\ttemp_" + (tempIndex + 1) + ".i32 :=.i32 " + "temp_" + tempIndex + ".i32 " + jmmNode.get("op")
+                + getOptype(jmmNode.get("op")) + " ";
+                tempIndex--;
+                ollirCode += "temp_" + tempIndex + ".i32;\n";
+                tempIndex += 2;
+            }
             return;
-        }
-        else if (Objects.equals(jmmNode.getKind(), "ArrayAccess")){
-            dealWithArrayAccess(jmmNode, method);
         }
 
         String val_type = findType(child, method);
         String op_type = getOptype(jmmNode.get("op"));
         if (index < jmmNode.getNumChildren() - 1 && !Objects.equals(child.getKind(), "Length")) {
 
+            if (Objects.equals(jmmNode.getJmmChild(index + 1).getKind(), "ArrayAccess")){
+                dealWithArrayAccess(jmmNode.getJmmChild(index + 1), method);
+                ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " ";
+
+                ollirCode += child.get("value") + val_type + " "+ child.getJmmParent().get("op") + val_type + " temp_"
+                + (tempIndex - 1) + ".i32;\n";
+
+                return;
+
+            }
             ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " ";
 
             ollirCode += child.get("value") + val_type + " "+ child.getJmmParent().get("op") + val_type + " ";
