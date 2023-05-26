@@ -47,6 +47,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         addVisit("ArrayAccess", this::dealWithArrayAccess);
         addVisit("BinaryOp", this::dealWithBinaryOp);
         addVisit("MethodCalls", this::dealWithMethodInvocation);
+        addVisit("Scope", this::dealWithScope);
         addVisit("While", this::dealWithWhile);
         addVisit("IfElse", this::dealWithIfElse);
         addVisit("ExprStmt", this::dealWithExprStmt);
@@ -835,15 +836,23 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             ifIndex++;
         }
 
-
-
         return "";
     }
-
 
     private void dealWithBinaryChild(JmmNode jmmNode, String method, int index){
 
         JmmNode child = jmmNode.getJmmChild(index);
+
+
+        String op_type = getOptype(jmmNode.get("op"));
+
+        if (Objects.equals(child.getKind(), "Scope")){
+            dealWithScope(child, method);
+
+            ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " temp_" + (tempIndex -1) + op_type + " " +
+                    jmmNode.get("op") + op_type + " ";
+            return;
+        }
 
         if (Objects.equals(jmmNode.getKind(), "Length") || (Objects.equals(child.getKind(), "Length")
                 && jmmNode.getNumChildren() > 1)){
@@ -873,9 +882,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
             return;
         }
-
         String val_type = findType(child, method);
-        String op_type = getOptype(jmmNode.get("op"));
+
         if (index < jmmNode.getNumChildren() - 1 && !Objects.equals(child.getKind(), "Length")) {
 
             if (Objects.equals(jmmNode.getJmmChild(index + 1).getKind(), "ArrayAccess")){
@@ -935,4 +943,26 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
+
+    private String dealWithScope(JmmNode jmmNode, String method){
+        for (JmmNode child : jmmNode.getChildren()){
+            if (Objects.equals(child.getKind(), "Assignment")){
+                dealWithAssignments(child, method);
+            } else if (Objects.equals(child.getKind(), "ArrayAssignment")) {
+                dealWithArrayAssignments(child, method);
+            }else if (Objects.equals(child.getKind(), "While")) {
+                dealWithWhile(child, method);
+            } else if (Objects.equals(child.getKind(), "Return")) {
+                dealWithReturn(child, method);
+            } else if (Objects.equals(child.getKind(), "MethodCalls")) {
+                dealWithMethodInvocation(child, method);
+            } else if (Objects.equals(child.getKind(), "BinaryOp")) {
+                dealWithBinaryOp(child, method);
+            } else if (Objects.equals(child.getKind(), "ExprStmt")) {
+                dealWithExprStmt(child, method);
+            }
+        }
+
+        return "";
+    }
 }
