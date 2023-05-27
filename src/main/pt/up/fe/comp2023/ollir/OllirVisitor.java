@@ -1,5 +1,6 @@
 package pt.up.fe.comp2023.ollir;
 
+import org.antlr.v4.runtime.misc.ObjectEqualityComparator;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
@@ -843,14 +844,17 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         JmmNode child = jmmNode.getJmmChild(index);
 
-
         String op_type = getOptype(jmmNode.get("op"));
 
-        if (Objects.equals(child.getKind(), "Scope")){
+        if (Objects.equals(child.getKind(), "Scope") ){
+
             dealWithScope(child, method);
 
-            ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " temp_" + (tempIndex -1) + op_type + " " +
-                    jmmNode.get("op") + op_type + " ";
+            if (index == jmmNode.getNumChildren() - 1){
+                ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " temp_" + (tempIndex -1) + op_type + " " +
+                        jmmNode.get("op") + op_type + " ";
+            }
+
             return;
         }
 
@@ -896,6 +900,14 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 return;
 
             }
+            else if (Objects.equals(jmmNode.getJmmChild(index + 1).getKind(), "Scope")){
+                visit(jmmNode.getJmmChild(index + 1));
+                ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " ";
+
+                ollirCode += child.get("value") + val_type + " "+ child.getJmmParent().get("op") + val_type + " temp_"
+                        + (tempIndex - 1) + ".i32;\n";
+                return;
+            }
             ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " ";
 
             ollirCode += child.get("value") + val_type + " "+ child.getJmmParent().get("op") + val_type + " ";
@@ -907,11 +919,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 tempIndex++;
 
             }
-
         }
         else if (index == jmmNode.getNumChildren() -1 && !Objects.equals(child.getKind(), "Length")) {
             if (Objects.equals(jmmNode.getJmmChild(index -1).getKind(), "Length") ||
-                    Objects.equals(jmmNode.getJmmChild(index - 1).getKind(), "BinaryOp")){
+                Objects.equals(jmmNode.getJmmChild(index - 1).getKind(), "BinaryOp") ||
+                Objects.equals(jmmNode.getJmmChild(index - 1).getKind(), "Scope")){
                 ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " ";
 
                 tempIndex --;
@@ -935,7 +947,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         for (int i = 0; i < jmmNode.getNumChildren(); i++) {
             JmmNode child = jmmNode.getJmmChild(i);
-            if (!Objects.equals(child.getKind(), "BinaryOp")) {
+
+            if (!Objects.equals(child.getKind(), "BinaryOp")){
+
+                if (i == 1 && Objects.equals(child.getKind(), "Scope"))
+                    continue;
                 dealWithBinaryChild(jmmNode, method, i);
             }
         }
