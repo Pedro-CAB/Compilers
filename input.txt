@@ -2,9 +2,9 @@ import ioPlus;
 class ArrayAccess {
 
 	public int foo(int[] a) {
-		int result;
+		bool result;
 
-        result = 1 + (2 / 3);
+		result = true && (1 < 2);
 
 		return result;
 	}
