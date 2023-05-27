@@ -4,7 +4,7 @@ class ArrayAccess {
 	public int foo(int[] a) {
 		int result;
 
-        result = (1 + 2) / 3;
+        result = 1 + (2 / 3);
 
 		return result;
 	}
