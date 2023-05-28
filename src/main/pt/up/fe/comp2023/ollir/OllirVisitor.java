@@ -446,6 +446,9 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
+        if (!param_indicator.equals(""))
+            dollarIndex++;
+
         return "";
     }
 
@@ -730,32 +733,36 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         // Else part
 
-        JmmNode els = jmmNode.getJmmChild(2);
+        if (jmmNode.getNumChildren() > 2){
+            JmmNode els = jmmNode.getJmmChild(2);
 
-        for (JmmNode else_children : els.getChildren()){
-            if (Objects.equals(else_children.getKind(), "Assignment")){
-                dealWithAssignments(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "ArrayAssignment")) {
-                dealWithArrayAssignments(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "While")) {
-                dealWithWhile(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "Return")) {
-                dealWithReturn(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "MethodCalls")) {
-                dealWithMethodInvocation(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "BinaryOp")) {
-                dealWithBinaryOp(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "ExprStmt")) {
-                dealWithExprStmt(else_children, method);
-            }
-            else if (Objects.equals(else_children.getKind(), "NestedStatements")){
-                for (JmmNode c : else_children.getChildren()){
-                    if (Objects.equals(c.getKind(), "IfElse")){
-                        dealWithIfElse(c, method);
+            for (JmmNode else_children : els.getChildren()){
+                if (Objects.equals(else_children.getKind(), "Assignment")){
+                    dealWithAssignments(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "ArrayAssignment")) {
+                    dealWithArrayAssignments(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "While")) {
+                    dealWithWhile(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "Return")) {
+                    dealWithReturn(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "MethodCalls")) {
+                    dealWithMethodInvocation(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "BinaryOp")) {
+                    dealWithBinaryOp(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "ExprStmt")) {
+                    dealWithExprStmt(else_children, method);
+                }
+                else if (Objects.equals(else_children.getKind(), "NestedStatements")){
+                    for (JmmNode c : else_children.getChildren()){
+                        if (Objects.equals(c.getKind(), "IfElse")){
+                            dealWithIfElse(c, method);
+                        }
                     }
                 }
             }
         }
+
+
 
 
         ollirCode += "\t\tgoto ENDIF_" + ifIndex++ + ";\n";
