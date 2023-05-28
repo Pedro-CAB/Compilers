@@ -425,6 +425,12 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 ollirCode += "temp_" + tempIndex + ".i32 :=.i32 " + array_var + "[temp_" + previous
                         + ".i32].i32;\n";
             }
+            case "ArrayAccess" ->{
+                dealWithArrayAccess(index, method);
+
+                ollirCode += "temp_" + tempIndex + ".i32 :=.i32 " + array_var + "[temp_" + (tempIndex - 1)
+                        + ".i32].i32;\n";
+            }
             default -> {
             }
         }
@@ -560,6 +566,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 String array = findArray(method);
 
                 ollirCode += "\t\t"+ method_arg + ".i32 :=.i32 " + "arraylength("  + array +  ").i32;\n";
+
+
             }
 
             method_sup = jmmNode.getJmmChild(0).get("value");
@@ -607,6 +615,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 String array = findArray(method);
 
                 ollirCode += "\t\t"+ method_arg + ".i32 :=.i32 " + "arraylength("  + array +  ").i32;\n";
+
             }
             if (symbolTable.getParameters(method_name).size() > 0){
 
@@ -866,6 +875,8 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
             ollirCode += "\t\t"+ method_arg + ".i32 :=.i32 " + "arraylength("  + array +  ").i32;\n";
 
+            tempIndex++;
+
             return;
         }
         if (Objects.equals(child.getKind(), "ArrayAccess") && jmmNode.getNumChildren() > 1){
@@ -959,7 +970,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         return "";
     }
-
 
     private String dealWithScope(JmmNode jmmNode, String method){
         for (JmmNode child : jmmNode.getChildren()){
