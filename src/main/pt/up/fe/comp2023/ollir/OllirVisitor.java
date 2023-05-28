@@ -476,8 +476,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             String t = getType(local_var.getType());
             if (Objects.equals(child.getKind(), "BinaryOp")){
                 dealWithBinaryOp(child, s);
-                //ollirCode += "\t\t" + local_var.getName() + t + " :=" + t+ " temp_" + tempIndex + t + ";\n";
-                tempIndex++;
                 return "";
             }
             else if (Objects.equals(child.getKind(), "ArrayAccess")){
@@ -910,7 +908,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
             if (index < jmmNode.getNumChildren() - 1) {
                 dealWithArrayAccess(child, method);
-                tempIndex++;
             }
             if (index == jmmNode.getNumChildren() - 1 &&
                     Objects.equals(jmmNode.getJmmChild(index -1).getKind(), "ArrayAccess")){
@@ -927,9 +924,9 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                             tempIndex +  op_type + " " + jmmNode.get("op") + op_type + " ";
                 }
 
-                tempIndex--;
-                ollirCode += "temp_" + tempIndex + op_type + ";\n";
-                tempIndex += 2;
+                //tempIndex--;
+                ollirCode += "temp_" + tempIndex++ + op_type + ";\n";
+                //tempIndex ++;
             }
             return;
         }
@@ -946,8 +943,10 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 else{
                     String var = jmmNode.getAncestor("Assignment").get().get("var");
 
-                    ollirCode += "\t\t" + var + op_type+ " :=" + op_type + " " + "temp_" +
-                            tempIndex +  op_type + " " + jmmNode.get("op") + op_type + " " + "temp_" + (tempIndex - 1)
+                    ollirCode += "\t\t" + var + op_type+ " :=" + op_type + " " +
+                            jmmNode.getJmmChild(index).get("value") + op_type + " " +
+                            //"temp_" + (tempIndex - 1) +  op_type + " " +
+                            jmmNode.get("op") + op_type + " " + "temp_" + tempIndex
                     + op_type + ";\n";
 
                 }
@@ -981,7 +980,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 Objects.equals(jmmNode.getJmmChild(index - 1).getKind(), "Scope")){
                 ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " ";
 
-                tempIndex --;
+                tempIndex--;
                 ollirCode += "temp_" + tempIndex + op_type + " " + child.getJmmParent().get("op") + val_type + " ";
             }
             ollirCode += child.get("value") + val_type + ";\n";
