@@ -1,13 +1,10 @@
 package pt.up.fe.comp2023.ollir;
-
-import org.antlr.v4.runtime.misc.ObjectEqualityComparator;
 import pt.up.fe.comp.jmm.analysis.table.Symbol;
 import pt.up.fe.comp.jmm.analysis.table.SymbolTable;
 import pt.up.fe.comp.jmm.analysis.table.Type;
 import pt.up.fe.comp.jmm.ast.AJmmVisitor;
 import pt.up.fe.comp.jmm.ast.JmmNode;
 
-import javax.management.ObjectName;
 import java.util.*;
 
 public class OllirVisitor extends AJmmVisitor<String, String> {
@@ -155,6 +152,14 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
         return "";
     }
 
+    private Boolean isParam(String var, String method){
+        for (Symbol s : symbolTable.getParameters(method)){
+            if (s.getName().equals(var))
+                return true;
+        }
+
+        return false;
+    }
 
 
     private String getOptype(String op){
@@ -388,11 +393,17 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         JmmNode index = jmmNode.getJmmChild(1);
         int previous;
+
+        String param_indicator = "";
+
+        if (isParam(array_var, method))
+            param_indicator = "$" + dollarIndex + ".";
+
         switch (index.getKind()) {
 
             case "Integer", "Identifier" -> {
 
-                ollirCode += "\t\ttemp_" + tempIndex + ".i32 :=.i32 " + array_var + ".array.i32" + "[" +
+                ollirCode += "\t\ttemp_" + tempIndex + ".i32 :=.i32 " + param_indicator + array_var + ".array.i32" + "[" +
                         index.get("value") + ".i32].i32;\n";
 
                 tempIndex++;
@@ -422,18 +433,21 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 tempIndex++;
 
                 previous = tempIndex - 1;
-                ollirCode += "temp_" + tempIndex + ".i32 :=.i32 " + array_var + "[temp_" + previous
+                ollirCode += "temp_" + tempIndex + ".i32 :=.i32 " + param_indicator + array_var + "[temp_" + previous
                         + ".i32].i32;\n";
             }
             case "ArrayAccess" ->{
                 dealWithArrayAccess(index, method);
 
-                ollirCode += "temp_" + tempIndex + ".i32 :=.i32 " + array_var + "[temp_" + (tempIndex - 1)
+                ollirCode += "temp_" + tempIndex + ".i32 :=.i32 " + param_indicator + array_var + "[temp_" + (tempIndex - 1)
                         + ".i32].i32;\n";
             }
             default -> {
             }
         }
+
+        if (!param_indicator.equals(""))
+            dollarIndex++;
 
         return "";
     }
@@ -719,32 +733,36 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         // Else part
 
-        JmmNode els = jmmNode.getJmmChild(2);
+        if (jmmNode.getNumChildren() > 2){
+            JmmNode els = jmmNode.getJmmChild(2);
 
-        for (JmmNode else_children : els.getChildren()){
-            if (Objects.equals(else_children.getKind(), "Assignment")){
-                dealWithAssignments(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "ArrayAssignment")) {
-                dealWithArrayAssignments(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "While")) {
-                dealWithWhile(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "Return")) {
-                dealWithReturn(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "MethodCalls")) {
-                dealWithMethodInvocation(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "BinaryOp")) {
-                dealWithBinaryOp(else_children, method);
-            } else if (Objects.equals(else_children.getKind(), "ExprStmt")) {
-                dealWithExprStmt(else_children, method);
-            }
-            else if (Objects.equals(else_children.getKind(), "NestedStatements")){
-                for (JmmNode c : else_children.getChildren()){
-                    if (Objects.equals(c.getKind(), "IfElse")){
-                        dealWithIfElse(c, method);
+            for (JmmNode else_children : els.getChildren()){
+                if (Objects.equals(else_children.getKind(), "Assignment")){
+                    dealWithAssignments(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "ArrayAssignment")) {
+                    dealWithArrayAssignments(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "While")) {
+                    dealWithWhile(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "Return")) {
+                    dealWithReturn(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "MethodCalls")) {
+                    dealWithMethodInvocation(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "BinaryOp")) {
+                    dealWithBinaryOp(else_children, method);
+                } else if (Objects.equals(else_children.getKind(), "ExprStmt")) {
+                    dealWithExprStmt(else_children, method);
+                }
+                else if (Objects.equals(else_children.getKind(), "NestedStatements")){
+                    for (JmmNode c : else_children.getChildren()){
+                        if (Objects.equals(c.getKind(), "IfElse")){
+                            dealWithIfElse(c, method);
+                        }
                     }
                 }
             }
         }
+
+
 
 
         ollirCode += "\t\tgoto ENDIF_" + ifIndex++ + ";\n";
@@ -902,8 +920,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 dealWithArrayAccess(child, method);
                 tempIndex--;
                 ollirCode += "\t\ttemp_" + (tempIndex + 1) + op_type+ " :=" + op_type + " " + "temp_" +
-                        tempIndex + op_type + jmmNode.get("op")
-                + op_type + " ";
+                        tempIndex +  op_type + " " + jmmNode.get("op") + op_type + " ";
                 tempIndex--;
                 ollirCode += "temp_" + tempIndex + op_type + ";\n";
                 tempIndex += 2;
