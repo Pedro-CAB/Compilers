@@ -1,5 +1,25 @@
 # Compilers Project
 
+## Group members
+
+- Henrique Santos Ferreira (up202007459@edu.fe.up.pt)
+- Pedro Manuel C.A.B Gomes (up202006086@edu.fe.up.pt)
+- Pedro Pereira Ferreira (up202004986@edu.fe.up.pt)
+
+## Work Distribution
+
+- Henrique Santos Ferreira - 33.33 %
+- Pedro Manuel C.A.B Gomes - 33.33 %
+- Pedro Pereira Ferreira - 33.33 %
+
+## Self-Assessment
+
+- We think our project deserves a 14 out of 20.
+
+## Extra Elements
+
+- It was not implemented any extra elements in the project
+
 For this project, you need to install [Java](https://jdk.java.net/), [Gradle](https://gradle.org/install/), and [Git](https://git-scm.com/downloads/) (and optionally, a [Git GUI client](https://git-scm.com/downloads/guis), such as TortoiseGit or GitHub Desktop). Please check the [compatibility matrix](https://docs.gradle.org/current/userguide/compatibility.html) for Java and Gradle versions.
 
 ## Project setup
