@@ -1,14 +1,20 @@
 import ioPlus;
+class SimpleWhileStat {
+    public int func(int a){
+        int c;
+        int i;
+        i = 0;
 
-class ComplexArrayAccess {
+        while (i < a) {
+            i = i + 1;
+        }
 
-	public static void main(String[] args) {
-        int a = 0;
-        if(a < 10){
-            a = 1;
+        if (a < 2){
+            i = 2;
         }
-        else{
-            a = 2;
-        }
-	}
+
+        return i;
+    }
+
 }
+
