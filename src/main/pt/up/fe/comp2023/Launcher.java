@@ -49,7 +49,7 @@ public class Launcher {
 
         Table table = new Table();
         TableVisitor visitor = new TableVisitor(table);
-        visitor.visit(parserResult.getRootNode(),"");
+        visitor.visit(parserResult.getRootNode(), "");
         System.out.println("Called semanticAnalysis");
         // ------------------------
 
@@ -65,16 +65,21 @@ public class Launcher {
 
         System.out.println("\n\nPrinting Symbol Table\n");
 
-        JmmSemanticsResult result = new Analysis().semanticAnalysis(parserResult); analysis.semanticAnalysis(parserResult);
+        JmmSemanticsResult result = new Analysis().semanticAnalysis(parserResult);
+        analysis.semanticAnalysis(parserResult);
 
         //JmmSemanticsResult result = new JmmSemanticsResult(parserResult.getRootNode(), table, parserResult.getReports(), parserResult.getConfig());
 
-        OllirResult ollirResult = new Ollir().toOllir(result);
+        if (result.getReports().size() > 0) {
+            System.out.println("Semantic Errors were detected. Aborting execution...");
+        } else {
+            OllirResult ollirResult = new Ollir().toOllir(result);
 
-        System.out.println("ollirResult: " + ollirResult.getOllirCode());
+            System.out.println("ollirResult: " + ollirResult.getOllirCode());
 
-        JasminResult jasminResult = new JasminGenerator().toJasmin(ollirResult);
-        System.out.println("jasminResult:\n" + jasminResult.getJasminCode());
+            JasminResult jasminResult = new JasminGenerator().toJasmin(ollirResult);
+            System.out.println("jasminResult:\n" + jasminResult.getJasminCode());
+        }
     }
 
     private static Map<String, String> parseArgs(String[] args) {
