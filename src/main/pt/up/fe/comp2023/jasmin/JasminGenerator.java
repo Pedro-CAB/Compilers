@@ -9,7 +9,7 @@ import pt.up.fe.comp.jmm.report.Report;
 import java.util.*;
 
 public class JasminGenerator implements JasminBackend {
-    private final static String labelPrefix = "l";
+    private final static String labelPrefix = "line";
     private StringBuilder jasminCode;
     private ClassUnit classUnit;
     private HashMap<String, Descriptor> vars;
@@ -305,19 +305,19 @@ public class JasminGenerator implements JasminBackend {
             switch (opInstruction.getOperation().getOpType()){
                 case ANDB -> {
                     this.loadCallArg(leftElement, tabs);
-                    this.addLine(tabs + "ifeq" + label);
+                    this.addLine(tabs + "ifeq"  + label);
                     this.updateStack(1);
                     this.loadCallArg(rightElement, tabs);
-                    this.addLine(tabs + "ifeq" + label);
+                    this.addLine(tabs + "ifeq " + label);
                     this.updateStack(1);
                     this.currentStack++;
                 }
                 case ORB -> {
                     this.loadCallArg(leftElement, tabs);
-                    this.addLine(tabs + "ifneq" + label);
+                    this.addLine(tabs + "ifneq " + label);
                     this.updateStack(1);
                     this.loadCallArg(rightElement, tabs);
-                    this.addLine(tabs + "ifneq" + label);
+                    this.addLine(tabs + "ifneq " + label);
                     this.updateStack(1);
                     this.currentStack++;
                 }
@@ -409,12 +409,12 @@ public class JasminGenerator implements JasminBackend {
             case SUB -> this.dealWithIntArithmetic(leftElement, rightElement, "isub", tabs);
             case MUL -> this.dealWithIntArithmetic(leftElement, rightElement, "imul", tabs);
             case DIV -> this.dealWithIntArithmetic(leftElement, rightElement, "idiv", tabs);
-            case LTH -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmpge", tabs);
-            case GTH -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmple", tabs);
-            case LTE -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmpgt", tabs);
-            case GTE -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmplt", tabs);
-            case EQ -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmpne", tabs);
-            case NEQ -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmpeq", tabs);
+            case LTH -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmplt", tabs);
+            case GTH -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmpgt", tabs);
+            case LTE -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmple", tabs);
+            case GTE -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmpge", tabs);
+            case EQ -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmpeq", tabs);
+            case NEQ -> this.dealWithBooleanArithmetic(leftElement, rightElement, "if_cmpne", tabs);
             case ANDB -> this.dealWithAndArithmetic(leftElement, rightElement, tabs);
         }
 
@@ -475,7 +475,7 @@ public class JasminGenerator implements JasminBackend {
 
         String elseLabel = labelPrefix + (this.numLines + 4);
         String endLabel = labelPrefix + (this.numLines + 5);
-        this.addLine(tabs + op + elseLabel);
+        this.addLine(tabs + op + " " + elseLabel);
         this.addLine(tabs + "iconst_1");
         this.addLine(tabs + "goto " + endLabel);
         this.addLine(elseLabel + ":");
@@ -490,10 +490,10 @@ public class JasminGenerator implements JasminBackend {
         String endLabel = labelPrefix + (this.numLines + 8);
 
         this.loadCallArg(e1, tabs);
-        this.addLine(tabs + "ifeq" + elseLabel);
+        this.addLine(tabs + "ifeq " + elseLabel);
         this.updateStack(1);
         this.loadCallArg(e2, tabs);
-        this.addLine(tabs + "ifeq" + elseLabel);
+        this.addLine(tabs + "ifeq " + elseLabel);
         this.updateStack(1);
 
         this.addLine(tabs + "iconst_1");
