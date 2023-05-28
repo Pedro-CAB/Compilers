@@ -446,9 +446,6 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             }
         }
 
-        if (!param_indicator.equals(""))
-            dollarIndex++;
-
         return "";
     }
 
@@ -479,7 +476,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             String t = getType(local_var.getType());
             if (Objects.equals(child.getKind(), "BinaryOp")){
                 dealWithBinaryOp(child, s);
-                ollirCode += "\t\t" + local_var.getName() + t + " :=" + t+ " temp_" + tempIndex + t + ";\n";
+                //ollirCode += "\t\t" + local_var.getName() + t + " :=" + t+ " temp_" + tempIndex + t + ";\n";
                 tempIndex++;
                 return "";
             }
@@ -919,8 +916,17 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                     Objects.equals(jmmNode.getJmmChild(index -1).getKind(), "ArrayAccess")){
                 dealWithArrayAccess(child, method);
                 tempIndex--;
-                ollirCode += "\t\ttemp_" + (tempIndex + 1) + op_type+ " :=" + op_type + " " + "temp_" +
-                        tempIndex +  op_type + " " + jmmNode.get("op") + op_type + " ";
+                if (jmmNode.getAncestor("Assignment").isEmpty()){
+                    ollirCode += "\t\ttemp_" + (tempIndex + 1) + op_type+ " :=" + op_type + " " + "temp_" +
+                            tempIndex +  op_type + " " + jmmNode.get("op") + op_type + " ";
+                }
+                else{
+                    String var = jmmNode.getAncestor("Assignment").get().get("var");
+
+                    ollirCode += "\t\t" + var + op_type+ " :=" + op_type + " " + "temp_" +
+                            tempIndex +  op_type + " " + jmmNode.get("op") + op_type + " ";
+                }
+
                 tempIndex--;
                 ollirCode += "temp_" + tempIndex + op_type + ";\n";
                 tempIndex += 2;
@@ -933,10 +939,18 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
             if (Objects.equals(jmmNode.getJmmChild(index + 1).getKind(), "ArrayAccess")){
                 dealWithArrayAccess(jmmNode.getJmmChild(index + 1), method);
-                ollirCode += "\t\ttemp_" + tempIndex + op_type + " :=" + op_type + " ";
+                if (jmmNode.getAncestor("Assignment").isEmpty()){
+                    ollirCode += "\t\ttemp_" + (tempIndex + 1) + op_type+ " :=" + op_type + " " + "temp_" +
+                            tempIndex +  op_type + " " + jmmNode.get("op") + op_type + " ";
+                }
+                else{
+                    String var = jmmNode.getAncestor("Assignment").get().get("var");
 
-                ollirCode += child.get("value") + val_type + " "+ child.getJmmParent().get("op") + val_type + " temp_"
-                + (tempIndex - 1) + ".i32;\n";
+                    ollirCode += "\t\t" + var + op_type+ " :=" + op_type + " " + "temp_" +
+                            tempIndex +  op_type + " " + jmmNode.get("op") + op_type + " " + "temp_" + (tempIndex - 1)
+                    + op_type + ";\n";
+
+                }
 
                 return;
 
