@@ -3,12 +3,12 @@ import ioPlus;
 class ComplexArrayAccess {
 
 	public static void main(String[] args) {
-        int i;
-        i = 9 / 4 / 3;
-
-	public MyClass getInt(int a, int b, int[] c, String d) {
-	    a = 1;
-	    b = 2;
-	    return a;
+        int a = 0;
+        if(a < 10){
+            a = 1;
+        }
+        else{
+            a = 2;
+        }
 	}
 }

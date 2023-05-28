@@ -130,6 +130,10 @@ public class JasminGenerator implements JasminBackend {
             this.currentStack = 0;
             this.labels = method.getLabels(instruction);
 
+            for (String label : this.labels) {
+                this.addLine(label + ":");
+            }
+
             this.dealWithInstruction(instruction, "\t");
             this.updateStack(0);
         }
@@ -165,9 +169,6 @@ public class JasminGenerator implements JasminBackend {
     }
 
     private void dealWithInstruction(Instruction instruction, String tabs) {
-        for (String label : labels) {
-          this.addLine(label + ":");
-        }
 
         switch (instruction.getInstType()) {
             case ASSIGN -> dealWithAssign((AssignInstruction) instruction, tabs);
@@ -320,13 +321,19 @@ public class JasminGenerator implements JasminBackend {
                     this.updateStack(1);
                     this.currentStack++;
                 }
-                case LTH -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmpge", "ifge", label, tabs);
-                case GTH -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmple", "ifle", label, tabs);
-                case LTE -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmpgt", "ifgt", label, tabs);
-                case GTE -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmplt", "iflt", label, tabs);
-                case EQ -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmpne", "ifne", label, tabs);
-                case NEQ -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmpeq", "ifeq", label, tabs);
+                case LTH -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmplt", "iflt", label, tabs);
+                case GTH -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmpgt", "ifgt", label, tabs);
+                case LTE -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmple", "ifle", label, tabs);
+                case GTE -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmpge", "ifge", label, tabs);
+                case EQ -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmpeq", "ifeq", label, tabs);
+                case NEQ -> this.dealWithIntCmpBranch(leftElement, rightElement, "if_icmpne", "ifne", label, tabs);
             }
+        }
+        else if(branchInstruction.getCondition() instanceof SingleOpInstruction opInstruction){
+            this.loadCallArg(opInstruction.getSingleOperand(), tabs);
+            this.addLine(tabs + "ifne " + branchInstruction.getLabel());
+            this.updateStack(1);
+            this.currentStack++;
         }
     }
 
@@ -666,7 +673,7 @@ public class JasminGenerator implements JasminBackend {
                 s = "L" + classType.getName() + ";";
             }
             case STRING -> s = "Ljava/lang/String;";
-            case OBJECTREF -> s = "a";
+            case OBJECTREF -> s = "";
             case THIS -> s = this.classUnit.getClassName();
             case VOID -> s = "V";
         }
