@@ -1,17 +1,20 @@
-class ArrayIndexNotInt {
+import ioPlus;
+class SimpleWhileStat {
+    public int func(int a){
+        int c;
+        int i;
+        i = 0;
 
-    int c;
+        while (i < a) {
+            i = i + 1;
+        }
 
-    public static void main(String[] args) {
+        if (a < 2){
+            i = 2;
+        }
 
+        return i;
     }
 
-    public boolean bar(){
-        return true;
-    }
-
-    public static int foo() {
-        int a = c;
-        return a;
-    }
 }
+

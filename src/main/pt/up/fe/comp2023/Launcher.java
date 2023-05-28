@@ -11,7 +11,10 @@ import pt.up.fe.comp.jmm.jasmin.JasminResult;
 import pt.up.fe.comp.jmm.ollir.OllirResult;
 import pt.up.fe.comp.jmm.parser.JmmParserResult;
 import pt.up.fe.comp2023.analysis.Analysis;
+import pt.up.fe.comp2023.jasmin.JasminGenerator;
 import pt.up.fe.comp2023.ollir.Ollir;
+import pt.up.fe.comp2023.symbol.table.Table;
+import pt.up.fe.comp2023.symbol.table.TableVisitor;
 import pt.up.fe.specs.util.SpecsIo;
 import pt.up.fe.specs.util.SpecsLogs;
 import pt.up.fe.specs.util.SpecsSystem;
@@ -42,6 +45,15 @@ public class Launcher {
         // Parse stage
         JmmParserResult parserResult = parser.parse(code, config);
 
+        // Remove after testing
+
+        Table table = new Table();
+        TableVisitor visitor = new TableVisitor(table);
+        visitor.visit(parserResult.getRootNode(),"");
+        System.out.println("Called semanticAnalysis");
+        // ------------------------
+
+
         // Check if there are parsing errors
         TestUtils.noErrors(parserResult.getReports());
 
@@ -50,11 +62,12 @@ public class Launcher {
 
         // ... add remaining stages
         Analysis analysis = new Analysis();
-        Jasmin jasmin = new Jasmin();
 
         System.out.println("\n\nPrinting Symbol Table\n");
 
-        JmmSemanticsResult result = new Analysis().semanticAnalysis(parserResult);analysis.semanticAnalysis(parserResult);
+        JmmSemanticsResult result = new Analysis().semanticAnalysis(parserResult); analysis.semanticAnalysis(parserResult);
+
+        //JmmSemanticsResult result = new JmmSemanticsResult(parserResult.getRootNode(), table, parserResult.getReports(), parserResult.getConfig());
 
         if(result.getReports().size() > 0){
             System.out.println("Semantic Errors were detected. Aborting execution...");
@@ -64,9 +77,8 @@ public class Launcher {
 
             System.out.println("ollirResult: " + ollirResult.getOllirCode());
 
-            JasminResult jasminResult = new Jasmin().toJasmin(ollirResult);
-            System.out.println("jasminResult:\n" + jasminResult.getReports());
-        }
+        JasminResult jasminResult = new JasminGenerator().toJasmin(ollirResult);
+        System.out.println("jasminResult:\n" + jasminResult.getJasminCode());
     }
 
     private static Map<String, String> parseArgs(String[] args) {
@@ -87,3 +99,4 @@ public class Launcher {
         return config;
     }
 }
+
