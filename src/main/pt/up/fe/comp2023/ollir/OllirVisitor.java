@@ -711,13 +711,11 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
         String op2_type = findType(op2, method);
 
-
-
-        ollirCode += "\t\tif ($" + dollarIndex + "." + op1.get("value") + op1_type + " " + op + op_type + " ";
+        ollirCode += "\t\tif (" + op1.get("value") + op1_type + " " + op + op_type + " ";
 
         dollarIndex++;
 
-        ollirCode += "$" + dollarIndex + "." + op2.get("value") + op2_type + ") goto THEN_" + dollarIndex + ";\n";
+        ollirCode += op2.get("value") + op2_type + ") goto THEN_" + dollarIndex + ";\n";
 
         // Else part
 
@@ -738,6 +736,13 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
                 dealWithBinaryOp(else_children, method);
             } else if (Objects.equals(else_children.getKind(), "ExprStmt")) {
                 dealWithExprStmt(else_children, method);
+            }
+            else if (Objects.equals(else_children.getKind(), "NestedStatements")){
+                for (JmmNode c : else_children.getChildren()){
+                    if (Objects.equals(c.getKind(), "IfElse")){
+                        dealWithIfElse(c, method);
+                    }
+                }
             }
         }
 
@@ -842,6 +847,13 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
             else if (Objects.equals(child.getKind(), "Identifier")){
                 identInIfElse(jmmNode, method);
             }
+            else if (Objects.equals(child.getKind(), "NestedStatements")){
+                for (JmmNode grandchild : child.getChildren()){
+                    if (Objects.equals(grandchild.getKind(), "IfElse"))
+                        dealWithIfElse(grandchild, method);
+                }
+            }
+
 
             ifIndex++;
         }
