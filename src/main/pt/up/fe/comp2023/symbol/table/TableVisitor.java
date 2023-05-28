@@ -58,7 +58,7 @@ public class TableVisitor extends AJmmVisitor<String, String> {
             if (Objects.equals(child.getKind(), "MethodCalls")){
                 ret.append(this.dealWithMethodCalls(child, s));
             }
-            else if (!Objects.equals(child.getKind(), "BinaryOp") && !Objects.equals(child.getKind(), "ArrayAcess")){
+            else if (!Objects.equals(child.getKind(), "BinaryOp") && !Objects.equals(child.getKind(), "ArrayAccess")){
                 ret.append(s).append(child.get("value")).append(";");
             }
         }

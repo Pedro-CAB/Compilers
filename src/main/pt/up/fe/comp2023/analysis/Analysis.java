@@ -213,9 +213,9 @@ public class Analysis implements JmmAnalysis {
                 firstType = getTypeOfBinaryOp(first);
                 reports.addAll(visitBinaryOp(reports, first));
             }
-            case "ArrayAcess" ->{
+            case "ArrayAccess" ->{
                 firstType = getArrayAccessReturn(first);
-                reports.addAll(visitArrayAcess(reports,first));
+                reports.addAll(visitArrayAccess(reports,first));
             }
             default -> {
                 firstType = "invalid_type";
@@ -233,9 +233,9 @@ public class Analysis implements JmmAnalysis {
                 secondType = getTypeOfBinaryOp(second);
                 reports.addAll(visitBinaryOp(reports, second));
             }
-            case "ArrayAcess" ->{
+            case "ArrayAccess" ->{
                 secondType = getArrayAccessReturn(second);
-                reports.addAll(visitArrayAcess(reports,second));
+                reports.addAll(visitArrayAccess(reports,second));
             }
             default -> {
                 secondType = "invalid_type";
@@ -334,8 +334,8 @@ public class Analysis implements JmmAnalysis {
                 }
                 reports.addAll(visitMethodCalls(reports, child));
                 break;
-            case "ArrayAcess":
-                reports.addAll(visitArrayAcess(reports, child));
+            case "ArrayAccess":
+                reports.addAll(visitArrayAccess(reports, child));
                 break;
             case "Self":
                 if(isMethodStatic){
@@ -445,7 +445,7 @@ public class Analysis implements JmmAnalysis {
 
     /**
      * Returns type of an array element
-     * @param root ArrayAcess Node
+     * @param root ArrayAccess Node
      * @return Type of Array Element returned from Access
      */
     private String getArrayAccessReturn(JmmNode root) {
@@ -490,13 +490,13 @@ public class Analysis implements JmmAnalysis {
                     }
                 }
                 break;
-            case "ArrayAcess":
+            case "ArrayAccess":
                 String arrayReturnType = getArrayAccessReturn(child);
                 String arrayType = getVarType(child.getJmmChild(0).get("value"));
                 if (!Objects.equals(arrayReturnType, varType)) {
                     reports.add(createReport(child, "Assigning variable of type '" + varType + "' to element of array of type '" + arrayType + "'."));
                 }
-                reports.addAll(visitArrayAcess(reports, child));
+                reports.addAll(visitArrayAccess(reports, child));
             case "Integer":
                 assignType = "int";
                 if (!Objects.equals(varType, assignType)) {
@@ -677,12 +677,12 @@ public class Analysis implements JmmAnalysis {
         return reports;
     }
     /**
-     * Visits ArrayAcess Node and checks for errors
+     * Visits ArrayAccess Node and checks for errors
      * @param reports List of Reports of previosuly found errors
-     * @param root ArrayAcess Node
+     * @param root ArrayAccess Node
      * @return Updated List of Reports
      */
-    private List<Report> visitArrayAcess(List<Report> reports, JmmNode root){
+    private List<Report> visitArrayAccess(List<Report> reports, JmmNode root){
         updateRelevantVars();
         JmmNode varChild = root.getChildren().get(0);
         System.out.println(varChild);
@@ -734,7 +734,8 @@ public class Analysis implements JmmAnalysis {
             case "BinaryOp":
                 reports.addAll(visitBinaryOp(reports,child));
                 break;
-            case "ArrayAcess":
+            case "ArrayAccess":
+                reports.addAll(visitArrayAccess(reports,child));
                 break;
             case "MethodCalls":
                 reports.addAll(visitMethodCalls(reports,child));
