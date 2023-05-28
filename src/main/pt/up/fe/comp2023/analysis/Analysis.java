@@ -20,6 +20,15 @@ public class Analysis implements JmmAnalysis {
     Boolean isMethodStatic, isMethodPrivate;
     String methodName, returnType;
 
+    private boolean isField(String name){
+        for(Symbol field : table.getFields()){
+            if(field.getName() == name){
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Receives a node of kind MethodCall and returns a list with the types of each of the given arguments
      * @param methodCall
@@ -128,13 +137,16 @@ public class Analysis implements JmmAnalysis {
         System.out.println("FIRST :: " + first);
         JmmNode second = node.getChildren().get(1);
         String firstType, secondType, result;
+        //Evaluate the type of the left operand
         firstType = switch (first.getKind()) {
             case "Identifier" -> getVarType(first.get("value"));
             case "Boolean" -> "boolean";
             case "Integer" -> "int";
             case "BinaryOp" -> getTypeOfBinaryOp(first);
+
             default -> "invalid_type";
         };
+        //Evaluate the type of the right operand
         secondType = switch (second.getKind()) {
             case "Identifier" -> getVarType(second.get("value"));
             case "Boolean" -> "boolean";
@@ -312,12 +324,11 @@ public class Analysis implements JmmAnalysis {
                 String calledMethodName = child.getJmmChild(1).get("methodName");
                 String varCalledOver = child.getJmmChild(0).get("value");
                 String varCalledOverType = getVarType(varCalledOver);
-                if(Objects.equals(varCalledOverType, table.getClassName())){
-                    if(table.getMethods().contains(calledMethodName)){
+                if(Objects.equals(varCalledOverType, table.getClassName())){  //method of the same class
+                    if(table.getMethods().contains(calledMethodName)){ //method is declared
                         String methodReturnType = table.getReturnType(calledMethodName).getName();
-                        String expectedReturnType = table.getReturnType(methodName).getName();
-                        if (!Objects.equals(methodReturnType, expectedReturnType)){
-                            reports.add(createReport(child, "Return type of " + methodName + " is '" + expectedReturnType + "' but " + calledMethodName + " returns '" + methodReturnType + "'."));
+                        if (!Objects.equals(methodReturnType, returnType)){
+                            reports.add(createReport(child, "Return type of " + methodName + " is '" + returnType + "' but " + calledMethodName + " returns '" + methodReturnType + "'."));
                         }
                     }
                 }
@@ -325,6 +336,7 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "ArrayAcess":
                 reports.addAll(visitArrayAcess(reports, child));
+                break;
             case "Self":
                 if(isMethodStatic){
                     reports.add(createReport(child,"'this' cannot be used in a static method."));
@@ -372,6 +384,7 @@ public class Analysis implements JmmAnalysis {
         String calledOver = root.getJmmChild(0).get("value");
         switch (childKind) {
             case "Identifier":
+                //CHAMAR VISITINDENTIFIER AQUI?
                 String className = table.getClassName();
                 List<String> imports = table.getImports();
                 if (getVarType(calledOver) == null){
@@ -379,7 +392,7 @@ public class Analysis implements JmmAnalysis {
                         reports.add(createReport(root, calledOver + " doesn't exist. Maybe you forgot to import a class or define a variable?"));
                     }
                 }
-                if (Objects.equals(calledOver, className) && !table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(), "")) {
+                if (Objects.equals(getVarType(calledOver), className) && !table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(), "")) {
                     reports.add(createReport(root, "Method " + calledMethodName + " is not declared."));
                 }
                 break;
@@ -388,25 +401,34 @@ public class Analysis implements JmmAnalysis {
                     reports.add(createReport(child,"'this' cannot be used in a static method."));
                 }
                 else if(!table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(),"")){
-                    reports.add(createReport(child,"Method " + calledMethodName + " was not declared."));
+                    reports.add(createReport(child,"Method " + calledMethodName + " is not declared."));
                 }
                 break;
         }
-        if(Objects.equals(calledOver, table.getClassName())) {
+        System.out.println(getVarType(calledOver) + " == " + table.getClassName());
+        if (Objects.equals(getVarType(calledOver), table.getClassName()) && !table.getMethods().contains(calledMethodName) && Objects.equals(table.getSuper(), "")){
+            reports.add(createReport(child,"Method " + calledMethodName + " is not declared."));
+        }
+        else if(Objects.equals(getVarType(calledOver), table.getClassName()) && table.getMethods().contains(calledMethodName)) {
+            System.out.println("ENTRA AQUI");
             List<Symbol> expectedParameters = table.getParameters(calledMethodName);
             List<String> receivedTypes = getTypeOfArgs(root.getJmmChild(1));
             if (expectedParameters == null){
+                System.out.println("IF -> A");
                 if (receivedTypes.size() > 0) {
                     reports.add(createReport(root, calledMethodName + " doesn't take any arguments but received" + receivedTypes.size() + "."));
                 }
             }
             else if (expectedParameters.size() != receivedTypes.size()) {
+                System.out.println("IF -> B");
                 reports.add(createReport(root, calledMethodName + " expected " + expectedParameters.size() + " arguments but received " + receivedTypes.size() + "."));
             } else {
+                System.out.println("IF -> C");
                 List<String> expectedTypes = new ArrayList<>();
                 for (Symbol arg : expectedParameters) {
                     expectedTypes.add(arg.getType().getName());
                 }
+                System.out.println(expectedTypes + " == " + expectedParameters);
                 int i = 0;
                 while (i < expectedTypes.size()) {
                     String argName = expectedParameters.get(i).getName();
@@ -533,13 +555,20 @@ public class Analysis implements JmmAnalysis {
      * Visits Identifier Node and checks for errors
      * @param reports List of Reports of previosuly found errors
      * @param root Identifier Node
+     * @param varType Type the variable is being assigned to
      * @return Updated List of Reports
      */
     private List<Report> visitIdentifier(List<Report> reports, JmmNode root, String varType) {
         String idType = getVarType(root.get("value"));
+        System.out.println("ENTROU LINHA 563");
+        System.out.println(isMethodStatic);
+        System.out.println(isField(root.get("value")));
         if (idType == null) { //Checks if variable was previously declared
             reports.add(createReport(root, "Variable " + root.get("value") + " is not declared."));
-        } else {
+        } else if (isMethodStatic && isField(root.get("value"))){
+            reports.add(createReport(root, "Cannot use fields in a static method."));
+        }
+        else {
             switch (root.getJmmParent().getKind()) {
                 case "Assignment":
                     if (!Objects.equals(varType, idType)) {
@@ -666,8 +695,19 @@ public class Analysis implements JmmAnalysis {
             reports.add(createReport(varChild,"Array Access over variable " + varName + " which is not an array."));
         }
         switch(indexChild.getKind()){
+            case "Boolean":
+                reports.add(createReport(indexChild,"Array Access Index should be of type 'int'."));
+                break;
+            case "MethodCalls":
+                reports.addAll(visitMethodCalls(reports,indexChild));
+                String calledOver = indexChild.getJmmChild(0).get("value");
+                String calledOverType = getVarType(calledOver);
+                String calledMethod = indexChild.getJmmChild(1).get("methodName");
+                String methodReturn = table.getReturnType(calledMethod).getName();
+                if (!Objects.equals(methodReturn, "int") && Objects.equals(calledOverType, table.getClassName()) && Objects.equals(table.getSuper(), ""));
+                    reports.add(createReport(indexChild,"Array Access Index should be of type 'int'."));
+                break;
             case "Integer":
-
                 break;
             case "Identifier":
                 String accessVarName = indexChild.get("value");
@@ -688,8 +728,6 @@ public class Analysis implements JmmAnalysis {
      * @return Updated List of Reports
      */
     private List<Report> visitExprStmt(List<Report> reports, JmmNode root){
-        System.out.println("called visitExprSmt");
-        System.out.println(root.getChildren().get(0).getKind());
         updateRelevantVars();
         JmmNode child = root.getChildren().get(0);
         switch(child.getKind()){

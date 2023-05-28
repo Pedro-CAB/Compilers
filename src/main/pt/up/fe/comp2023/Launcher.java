@@ -69,9 +69,13 @@ public class Launcher {
 
         //JmmSemanticsResult result = new JmmSemanticsResult(parserResult.getRootNode(), table, parserResult.getReports(), parserResult.getConfig());
 
-        OllirResult ollirResult = new Ollir().toOllir(result);
+        if(result.getReports().size() > 0){
+            System.out.println("Semantic Errors were detected. Aborting execution...");
+        }
+        else {
+            OllirResult ollirResult = new Ollir().toOllir(result);
 
-        System.out.println("ollirResult: " + ollirResult.getOllirCode());
+            System.out.println("ollirResult: " + ollirResult.getOllirCode());
 
         JasminResult jasminResult = new JasminGenerator().toJasmin(ollirResult);
         System.out.println("jasminResult:\n" + jasminResult.getJasminCode());
