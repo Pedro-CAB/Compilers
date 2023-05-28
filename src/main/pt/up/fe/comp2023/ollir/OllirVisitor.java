@@ -945,8 +945,7 @@ public class OllirVisitor extends AJmmVisitor<String, String> {
 
                     ollirCode += "\t\t" + var + op_type+ " :=" + op_type + " " +
                             jmmNode.getJmmChild(index).get("value") + op_type + " " +
-                            //"temp_" + (tempIndex - 1) +  op_type + " " +
-                            jmmNode.get("op") + op_type + " " + "temp_" + tempIndex
+                            jmmNode.get("op") + op_type + " " + "temp_" + (tempIndex - 1)
                     + op_type + ";\n";
 
                 }
