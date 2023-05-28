@@ -20,6 +20,15 @@ public class Analysis implements JmmAnalysis {
     Boolean isMethodStatic, isMethodPrivate;
     String methodName, returnType;
 
+    private boolean isField(String name){
+        for(Symbol field : table.getFields()){
+            if(field.getName() == name){
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Receives a node of kind MethodCall and returns a list with the types of each of the given arguments
      * @param methodCall
@@ -128,13 +137,16 @@ public class Analysis implements JmmAnalysis {
         System.out.println("FIRST :: " + first);
         JmmNode second = node.getChildren().get(1);
         String firstType, secondType, result;
+        //Evaluate the type of the left operand
         firstType = switch (first.getKind()) {
             case "Identifier" -> getVarType(first.get("value"));
             case "Boolean" -> "boolean";
             case "Integer" -> "int";
             case "BinaryOp" -> getTypeOfBinaryOp(first);
+
             default -> "invalid_type";
         };
+        //Evaluate the type of the right operand
         secondType = switch (second.getKind()) {
             case "Identifier" -> getVarType(second.get("value"));
             case "Boolean" -> "boolean";
@@ -324,6 +336,7 @@ public class Analysis implements JmmAnalysis {
                 break;
             case "ArrayAcess":
                 reports.addAll(visitArrayAcess(reports, child));
+                break;
             case "Self":
                 if(isMethodStatic){
                     reports.add(createReport(child,"'this' cannot be used in a static method."));
@@ -547,9 +560,15 @@ public class Analysis implements JmmAnalysis {
      */
     private List<Report> visitIdentifier(List<Report> reports, JmmNode root, String varType) {
         String idType = getVarType(root.get("value"));
+        System.out.println("ENTROU LINHA 563");
+        System.out.println(isMethodStatic);
+        System.out.println(isField(root.get("value")));
         if (idType == null) { //Checks if variable was previously declared
             reports.add(createReport(root, "Variable " + root.get("value") + " is not declared."));
-        } else {
+        } else if (isMethodStatic && isField(root.get("value"))){
+            reports.add(createReport(root, "Cannot use fields in a static method."));
+        }
+        else {
             switch (root.getJmmParent().getKind()) {
                 case "Assignment":
                     if (!Objects.equals(varType, idType)) {
@@ -676,8 +695,19 @@ public class Analysis implements JmmAnalysis {
             reports.add(createReport(varChild,"Array Access over variable " + varName + " which is not an array."));
         }
         switch(indexChild.getKind()){
+            case "Boolean":
+                reports.add(createReport(indexChild,"Array Access Index should be of type 'int'."));
+                break;
+            case "MethodCalls":
+                reports.addAll(visitMethodCalls(reports,indexChild));
+                String calledOver = indexChild.getJmmChild(0).get("value");
+                String calledOverType = getVarType(calledOver);
+                String calledMethod = indexChild.getJmmChild(1).get("methodName");
+                String methodReturn = table.getReturnType(calledMethod).getName();
+                if (!Objects.equals(methodReturn, "int") && Objects.equals(calledOverType, table.getClassName()) && Objects.equals(table.getSuper(), ""));
+                    reports.add(createReport(indexChild,"Array Access Index should be of type 'int'."));
+                break;
             case "Integer":
-
                 break;
             case "Identifier":
                 String accessVarName = indexChild.get("value");
@@ -698,8 +728,6 @@ public class Analysis implements JmmAnalysis {
      * @return Updated List of Reports
      */
     private List<Report> visitExprStmt(List<Report> reports, JmmNode root){
-        System.out.println("called visitExprSmt");
-        System.out.println(root.getChildren().get(0).getKind());
         updateRelevantVars();
         JmmNode child = root.getChildren().get(0);
         switch(child.getKind()){
